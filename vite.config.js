@@ -6,6 +6,7 @@ import { VitePWA } from 'vite-plugin-pwa';
 export default defineConfig({
   root: resolve(__dirname, 'src'),
   publicDir: resolve(__dirname, 'src', 'public'),
+  base: './',
   plugins: [
     VitePWA({
       strategies: 'injectManifest',
