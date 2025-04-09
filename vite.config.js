@@ -124,10 +124,10 @@ export default defineConfig({
     })
   ],
   build: {
-    outDir: resolve(__dirname, 'docs'), // Output to the docs directory
+    outDir: resolve(__dirname, 'dist'),
     emptyOutDir: true,
     rollupOptions: {
-      input: resolve(__dirname, 'docs/index.html') // Point to the new location
+      input: resolve(__dirname, 'dist/index.html')
     }
   },
   resolve: {
