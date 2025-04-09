@@ -6,7 +6,7 @@ import { VitePWA } from 'vite-plugin-pwa';
 export default defineConfig({
   root: resolve(__dirname, 'src'),
   publicDir: resolve(__dirname, 'src', 'public'),
-  base: './',
+  base: '/story-web-v2/',
   plugins: [
     VitePWA({
       strategies: 'injectManifest',
@@ -128,7 +128,7 @@ export default defineConfig({
     outDir: resolve(__dirname, 'dist'),
     emptyOutDir: true,
     rollupOptions: {
-      input: resolve(__dirname, 'dist/index.html')
+      input: resolve(__dirname, 'src/index.html')
     }
   },
   resolve: {

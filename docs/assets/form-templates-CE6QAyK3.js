@@ -1,8 +1,8 @@
-const e=()=>`
+const e=a=>`
   <section>
     <div class="new-story__header">
       <div class="container">
-        <h1 class="new-story__header__title">Buat Cerita Baru</h1>
+        <h1 class="new-story__header__title">Buat Cerita Baru ${a?"(Guest)":""}</h1>
         <p class="new-story__header__description">
           Silakan lengkapi formulir di bawah untuk membuat cerita baru.<br>
           Pastikan cerita yang dibuat adalah valid.
@@ -86,12 +86,12 @@ const e=()=>`
       </form>
     </div>
   </section>
-`,o=(t,a)=>`
-  <li class="new-form__photo__outputs-item" data-photo-id="${a}">
-    <img src="${t}" alt="Preview ${a}" loading="lazy">
+`,o=(a,t)=>`
+  <li class="new-form__photo__outputs-item" data-photo-id="${t}">
+    <img src="${a}" alt="Preview ${t}" loading="lazy">
     <button
       class="new-form__photo__outputs-item__delete-btn"
-      data-index="${a}"
+      data-index="${t}"
       type="button"
       aria-label="Remove photo"
     >
