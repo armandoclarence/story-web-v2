@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Offline - Story Web</title>
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/offline.css">
+    <link rel="manifest" href="/manifest.webmanifest">
+    <meta name="theme-color" content="#2193b0">
+    <link rel="apple-touch-icon" href="/icons/icon-192x192.png">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-status-bar-style" content="black">
+    <meta name="mobile-web-app-title" content="StoryWeb">
+    <meta name="description" content="Platform untuk berbagi cerita dan pengalaman">
+    <meta name="author" content="Story Web">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <link rel="icon" href="/favicon.ico" type="image/x-icon">
+    <meta name="keywords" content="cerita, pengalaman, berbagi, online, cerita online, cerita online gratis, cerita online terbaru, cerita online terpopuler, cerita online terfavorit, cerita online terbaru, cerita online terpopuler, cerita online terfavorit">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <!-- App Shell - Header -->
+    <header class="app-header">
+        <nav class="navbar">
+            <div class="container">
+                <a href="/" class="navbar-brand">
+                    <img src="/images/logo.png" alt="Story Web Logo" class="navbar-logo">
+                </a>
+                <ul class="navbar-menu">
+                    <li><a href="/">Home</a></li>
+                    <li><a href="/favorites">Favorites</a></li>
+                    <li><a href="/login">Login</a></li>
+                </ul>
+            </div>
+        </nav>
+    </header>
+
+    <!-- App Shell - Main Content -->
+    <main>
+        <div class="offline-container">
+            <div class="offline-content">
+                <div class="offline-icon">
+                    <i class="fas fa-wifi-slash"></i>
+                </div>
+                <h1 class="offline-title">You're Offline</h1>
+                <p class="offline-message">It seems you're not connected to the internet. Please check your connection and try again.</p>
+                <div class="offline-actions">
+                    <button class="retry-button" onclick="window.location.reload()">
+                        <i class="fas fa-sync-alt"></i> Try Again
+                    </button>
+                    <a href="/favorites" class="favorites-link">
+                        <i class="fas fa-heart"></i> View Favorites
+                    </a>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- App Shell - Footer -->
+    <footer class="app-footer">
+        <div class="container">
+            <p>&copy; 2024 Story Web. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script>
+        // Check if we're offline and came from a failed navigation
+        if (!navigator.onLine && window.location.pathname !== '/offline.html') {
+            // Store the attempted URL
+            sessionStorage.setItem('lastAttemptedUrl', window.location.href);
+        }
+
+        // When online status changes
+        window.addEventListener('online', () => {
+            const lastUrl = sessionStorage.getItem('lastAttemptedUrl');
+            if (lastUrl) {
+                sessionStorage.removeItem('lastAttemptedUrl');
+                window.location.href = lastUrl;
+            } else {
+                window.location.reload();
+            }
+        });
+
+        // Add animation to the retry button
+        const retryButton = document.querySelector('.retry-button');
+        retryButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            retryButton.classList.add('rotating');
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        });
+    </script>
+</body>
+</html> 

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background Circle -->
+  <circle cx="256" cy="256" r="240" fill="#E3F2FD" opacity="0.5"/>
+  
+  <!-- Cloud -->
+  <path d="M256 96C200 96 160 136 160 192C160 248 200 288 256 288C312 288 352 248 352 192C352 136 312 96 256 96Z" fill="#2193b0"/>
+  <path d="M256 96C200 96 160 136 160 192C160 248 200 288 256 288C312 288 352 248 352 192C352 136 312 96 256 96Z" fill="#2193b0" fill-opacity="0.2"/>
+  
+  <!-- Signal Lines -->
+  <path d="M96 256L160 256" stroke="#2193b0" stroke-width="8" stroke-linecap="round"/>
+  <path d="M352 256L416 256" stroke="#2193b0" stroke-width="8" stroke-linecap="round"/>
+  <path d="M128 192L160 192" stroke="#2193b0" stroke-width="8" stroke-linecap="round"/>
+  <path d="M352 192L384 192" stroke="#2193b0" stroke-width="8" stroke-linecap="round"/>
+  <path d="M160 128L160 160" stroke="#2193b0" stroke-width="8" stroke-linecap="round"/>
+  <path d="M352 128L352 160" stroke="#2193b0" stroke-width="8" stroke-linecap="round"/>
+  
+  <!-- Exclamation Mark -->
+  <path d="M256 352L256 384" stroke="#2193b0" stroke-width="8" stroke-linecap="round"/>
+  <circle cx="256" cy="400" r="8" fill="#2193b0"/>
+</svg> 

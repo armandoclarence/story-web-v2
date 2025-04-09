@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Story Web App</title>
+  
+    <!-- Preconnect and Preload -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" media="print" onload="this.media='all'" />
+  
+    <!-- FontAwesome CDN (defer load) -->
+    <link rel="preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" media="print" onload="this.media='all'" />
+  
+    <!-- Your Main CSS -->
+    <link rel="stylesheet" href="styles/main.css" />
+  
+    <!-- PWA Manifest & Icons -->
+    <link rel="manifest" href="/manifest.webmanifest">
+    <meta name="theme-color" content="#2193b0">
+    <link rel="icon" href="/favicon.ico" type="image/x-icon">
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+  
+    <!-- Mobile Support -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-status-bar-style" content="black">
+    <meta name="mobile-web-app-title" content="StoryWeb">
+  
+    <!-- Meta Tags -->
+    <meta name="description" content="Platform untuk berbagi cerita dan pengalaman">
+    <meta name="author" content="Story Web">
+    <meta name="keywords" content="cerita, pengalaman, berbagi, online, cerita online gratis, cerita online terbaru, cerita online terpopuler, cerita online terfavorit">
+  
+    <!-- Compatibility -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  </head>
+  
+  <body>
+    <a href="#main-content" class="skip-link" id="skip-link">Skip to content</a>
+
+    <header>
+      <div class="container">
+        <div class="header-content">
+          <a href="#/" class="brand-name__link">
+            <i class="fas fa-book-open"></i>
+            <span>Story Web</span>
+          </a>
+
+          <button id="drawer-button" class="drawer-button" aria-label="Toggle navigation">
+            <div class="hamburger-icon">
+              <span></span>
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+          </button>
+
+          <nav id="navigation-drawer" class="navigation-drawer">
+            <ul id="navlist-main" class="navigation-drawer__navlist-main" name="navlist-main"></ul>
+            <ul id="navlist" class="navigation-drawer__navlist" name="navlist"></ul>
+          </nav>
+        </div>
+      </div>
+    </header>
+
+    <main id="main-content" tabIndex="0"></main>
+
+    <footer>
+      <div class="container">
+        <hr />
+        <div class="footer-content">
+          <p class="copyright">© 2025 Story Web. All rights reserved.</p>
+          <a href="#/" class="brand-name__link">
+            <i class="fas fa-book-open"></i>
+            <span>Story Web</span>
+          </a>
+        </div>
+      </div>
+    </footer>
+
+    <script defer type="module" src="./scripts/index.js"></script>
+  </body>
+</html>
