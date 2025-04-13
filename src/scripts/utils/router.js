@@ -10,6 +10,8 @@ class Router {
     this.hashChangeCallbacks = [];
     this.content = null;
     this.app = null;
+    this.isGitHubPages = window.location.hostname.includes('github.io');
+    this.basePath = this.isGitHubPages ? '/story-web-v2' : '';
   }
 
   // Method to set the app instance
@@ -44,20 +46,21 @@ class Router {
 
     // Register service worker for both development and production
     this.registerServiceWorker();
+
+    this.setupNavigationHandlers();
   }
 
   async registerServiceWorker() {
     if ('serviceWorker' in navigator) {
       try {
-        // Get the base URL from window.location
-        const isGitHubPages = window.location.hostname.includes('github.io');
-        const swPath = isGitHubPages ? '/story-web-v2/sw.js' : '/sw.js';
-        
+        // Dynamic service worker path and scope based on environment
+        const swPath = this.isGitHubPages ? '/story-web-v2/sw.js' : 'sw.js';
+        const swScope = this.isGitHubPages ? '/story-web-v2/' : '/';
+
         const registration = await navigator.serviceWorker.register(swPath, {
-          scope: isGitHubPages ? '/story-web-v2/' : '/',
+          scope: swScope
         });
 
-        // Handle updates
         registration.addEventListener('updatefound', () => {
           const newWorker = registration.installing;
           newWorker.addEventListener('statechange', () => {
@@ -252,6 +255,28 @@ class Router {
       }
     }
   };
+
+  setupNavigationHandlers() {
+    document.addEventListener('click', (event) => {
+      const link = event.target.closest('a, button.nav-link');
+      if (!link) return;
+
+      if (link.tagName === 'A' && link.getAttribute('href')?.startsWith('#')) {
+        event.preventDefault();
+        const hash = link.getAttribute('href');
+        window.location.hash = hash;
+      } else if (link.id === 'logout-button') {
+        event.preventDefault();
+        if (confirm('Apakah Anda yakin ingin keluar?')) {
+          this.handleLogout();
+        }
+      }
+    });
+  }
+
+  handleLogout() {
+    // Implementasi handleLogout
+  }
 }
 
 // Add styles

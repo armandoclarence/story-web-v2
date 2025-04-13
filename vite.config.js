@@ -4,7 +4,8 @@ import { VitePWA } from 'vite-plugin-pwa';
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
-  const base = mode === 'production' ? '/story-web-v2/' : '/';
+  const isProduction = mode === 'production';
+  const base = isProduction ? '/story-web-v2/' : '/';
   return {
     root: resolve(__dirname, 'src'),
     publicDir: resolve(__dirname, 'src', 'public'),
@@ -125,13 +126,28 @@ export default defineConfig(({ mode }) => {
             }
           ]
         },
-        injectManifest: {
-          injectionPoint: 'self.__WB_MANIFEST',
-        },
         workbox: {
-          sourcemap: true,
-          globPatterns: ['**/*.{js,css,html,ico,png,svg,jpg,jpeg,gif,webp}']
+          globPatterns: ['**/*.{js,css,html,ico,png,svg,webp}'],
+          navigateFallback: isProduction ? '/story-web-v2/index.html' : '/index.html',
+          navigateFallbackDenylist: [/^\/api\//],
+          runtimeCaching: [
+            {
+              urlPattern: /^https:\/\/story-api\.dicoding\.dev\/v1\//,
+              handler: 'NetworkFirst',
+              options: {
+                cacheName: 'api-cache',
+                expiration: {
+                  maxEntries: 100,
+                  maxAgeSeconds: 24 * 60 * 60
+                }
+              }
+            }
+          ]
         },
+        devOptions: {
+          enabled: true,
+          type: 'module'
+        }
       })
     ],
     build: {

@@ -3,7 +3,18 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Story Web App</title>
+    <meta name="theme-color" content="#2193b0">
+    <!-- Dynamic base path -->
+    <script>
+      // Set base path dynamically
+      const isGitHubPages = window.location.hostname.includes('github.io');
+      const basePath = isGitHubPages ? '/story-web-v2/' : '/';
+      document.write(`<base href="${basePath}">`);
+    </script>
+    <!-- Update asset paths to be relative -->
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <link rel="manifest" href="manifest.webmanifest">
+    <title>Story Web</title>
   
     <!-- Preconnect and Preload -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -18,9 +29,9 @@
     <!-- Your Main CSS -->
   
     <!-- PWA Manifest & Icons -->
-    <link rel="manifest" href="/story-web-v2/manifest.webmanifest">
+    <link rel="manifest" href="./manifest.webmanifest">
     <meta name="theme-color" content="#2193b0">
-    <link rel="icon" href="/story-web-v2/favicon.ico" type="image/x-icon">
+    <link rel="icon" href="./favicon.ico" type="image/x-icon">
     <link rel="apple-touch-icon" href="/story-web-v2/icons/apple-touch-icon.png">
   
     <!-- Mobile Support -->
@@ -35,7 +46,7 @@
   
     <!-- Compatibility -->
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <script type="module" crossorigin src="/story-web-v2/assets/index-CIDyFSh4.js"></script>
+    <script type="module" crossorigin src="/story-web-v2/assets/index-DuSjLy-A.js"></script>
     <link rel="stylesheet" crossorigin href="/story-web-v2/assets/index-BJyeh9m-.css">
   <link rel="manifest" href="/story-web-v2/manifest.webmanifest"><script id="vite-plugin-pwa:register-sw" src="/story-web-v2/registerSW.js"></script></head>
   
