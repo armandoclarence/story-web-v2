@@ -49,8 +49,12 @@ class Router {
   async registerServiceWorker() {
     if ('serviceWorker' in navigator) {
       try {
-        const registration = await navigator.serviceWorker.register('./sw.js', {
-          scope: '/',
+        // Get the base URL from window.location
+        const isGitHubPages = window.location.hostname.includes('github.io');
+        const swPath = isGitHubPages ? '/story-web-v2/sw.js' : '/sw.js';
+        
+        const registration = await navigator.serviceWorker.register(swPath, {
+          scope: isGitHubPages ? '/story-web-v2/' : '/',
         });
 
         // Handle updates
@@ -93,6 +97,9 @@ class Router {
         window.location.hash = '#/404';
         return;
       }
+
+      // Add touch event handling for mobile
+      this.setupMobileNavigation();
 
       if (!navigator.onLine) {
         await this.handleOfflineRoute(urlSegments, page);
@@ -212,6 +219,39 @@ class Router {
       document.body.insertBefore(banner, document.body.firstChild);
     }
   }
+
+  // Add this new method for mobile navigation
+  setupMobileNavigation() {
+    const navLinks = document.querySelectorAll('.nav-link');
+    navLinks.forEach(link => {
+      // Remove existing listeners
+      link.removeEventListener('touchstart', this.handleTouchStart);
+      link.removeEventListener('touchend', this.handleTouchEnd);
+      
+      // Add touch event listeners
+      link.addEventListener('touchstart', this.handleTouchStart);
+      link.addEventListener('touchend', this.handleTouchEnd);
+    });
+  }
+
+  handleTouchStart = (event) => {
+    event.target.classList.add('active');
+  };
+
+  handleTouchEnd = (event) => {
+    event.target.classList.remove('active');
+    
+    // Get the href or trigger click for buttons
+    const link = event.target.closest('.nav-link');
+    if (link) {
+      event.preventDefault();
+      if (link.tagName === 'A') {
+        window.location.href = link.href;
+      } else if (link.tagName === 'BUTTON') {
+        link.click();
+      }
+    }
+  };
 }
 
 // Add styles
@@ -261,6 +301,31 @@ const styles = `
 
 .offline-mode .online-only {
   display: none;
+}
+
+/* Add these new styles */
+.nav-link {
+  -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.nav-link.active {
+  opacity: 0.7;
+}
+
+@media (hover: none) {
+  .nav-link:hover {
+    opacity: 1;
+  }
+}
+
+/* Fix for iOS devices */
+.nav-item {
+  cursor: pointer;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 `;
 
