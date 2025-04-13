@@ -53,12 +53,10 @@ class Router {
   async registerServiceWorker() {
     if ('serviceWorker' in navigator) {
       try {
-        // Dynamic service worker path and scope based on environment
-        const swPath = this.isGitHubPages ? '/story-web-v2/sw.js' : 'sw.js';
-        const swScope = this.isGitHubPages ? '/story-web-v2/' : '/';
-
+        const swPath = this.isGitHubPages ? '/story-web-v2/registerSW.js' : '/registerSW.js';
+        
         const registration = await navigator.serviceWorker.register(swPath, {
-          scope: swScope
+          scope: this.isGitHubPages ? '/story-web-v2/' : '/'
         });
 
         registration.addEventListener('updatefound', () => {
@@ -104,11 +102,7 @@ class Router {
       // Add touch event handling for mobile
       this.setupMobileNavigation();
 
-      if (!navigator.onLine) {
-        await this.handleOfflineRoute(urlSegments, page);
-        return;
-      }
-
+      // Check authentication before offline check
       const isAuthenticated = !!getAccessToken();
       if (page.requiresAuth && !isAuthenticated) {
         window.location.hash = '#/login';
@@ -118,6 +112,14 @@ class Router {
       if (page.requiresUnauth && isAuthenticated) {
         window.location.hash = '#/';
         return;
+      }
+
+      if (!navigator.onLine) {
+        // Only handle offline for authenticated pages that support it
+        if (isAuthenticated && page.offlineSupport) {
+          await this.handleOfflineRoute(urlSegments, page);
+          return;
+        }
       }
 
       await this.renderPageWithTransition(page);

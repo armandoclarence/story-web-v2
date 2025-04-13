@@ -1,5 +1,6 @@
 import 'tiny-slider/dist/tiny-slider.css';
 import 'leaflet/dist/leaflet.css';
+import '../styles/main.css'
 
 import App from './pages/app';
 import Camera from './utils/camera';

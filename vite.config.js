@@ -1,33 +1,62 @@
 import { defineConfig } from 'vite';
-import { resolve } from 'path';
 import { VitePWA } from 'vite-plugin-pwa';
+import { resolve } from 'path';
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
   const isProduction = mode === 'production';
   const base = isProduction ? '/story-web-v2/' : '/';
+
   return {
-    root: resolve(__dirname, 'src'),
-    publicDir: resolve(__dirname, 'src', 'public'),
-    base: base,
+    base,
+    root: './', // Set root to current directory
+    build: {
+      outDir: 'dist',
+      emptyOutDir: true,
+      cssCodeSplit: false, // This will combine all CSS into one file
+      rollupOptions: {
+        input: {
+          main: resolve(__dirname, 'index.html')
+        },
+        output: {
+          assetFileNames: (assetInfo) => {
+            let extType = assetInfo.name.split('.')[1];
+            if (/png|jpe?g|svg|gif|tiff|bmp|ico/i.test(extType)) {
+              extType = 'img';
+            }
+            return `assets/${extType}/[name][extname]`;
+          },
+          chunkFileNames: 'assets/js/[name].js',
+          entryFileNames: 'assets/js/[name].js',
+        },
+      }
+    },
+    css: {
+      // Generate a single CSS file
+      postcss: {
+        plugins: []
+      }
+    },
+    optimizeDeps: {
+      include: ['leaflet', 'tiny-slider']
+    },
+    resolve: {
+      alias: {
+        '@': resolve(__dirname, 'src')
+      }
+    },
     plugins: [
       VitePWA({
-        strategies: 'injectManifest',
-        filename: 'sw.js',
         registerType: 'autoUpdate',
-        includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
+        injectRegister: 'auto',
         manifest: {
           name: 'Story Web',
           short_name: 'StoryWeb',
-          description: 'Platform untuk berbagi cerita dan pengalaman',
-          theme_color: '#2193b0',
-          background_color: '#ffffff',
+          start_url: base,
           display: 'standalone',
-          orientation: 'portrait',
-          start_url: '/#/',
-          id: '/#/',
-          scope: '/',
-          categories: ['social', 'lifestyle'],
+          background_color: '#ffffff',
+          theme_color: '#2193b0',
+          scope: base,
           icons: [
             {
               src: 'favicon.ico',
@@ -128,8 +157,7 @@ export default defineConfig(({ mode }) => {
         },
         workbox: {
           globPatterns: ['**/*.{js,css,html,ico,png,svg,webp}'],
-          navigateFallback: isProduction ? '/story-web-v2/index.html' : '/index.html',
-          navigateFallbackDenylist: [/^\/api\//],
+          navigateFallback: null,
           runtimeCaching: [
             {
               urlPattern: /^https:\/\/story-api\.dicoding\.dev\/v1\//,
@@ -143,32 +171,8 @@ export default defineConfig(({ mode }) => {
               }
             }
           ]
-        },
-        devOptions: {
-          enabled: true,
-          type: 'module'
         }
       })
-    ],
-    build: {
-      outDir: resolve(__dirname, 'dist'),
-      emptyOutDir: true,
-      rollupOptions: {
-        input: resolve(__dirname, 'src/index.html')
-      },
-    },
-    resolve: {
-      alias: {
-        '@': resolve(__dirname, 'src'),
-      },
-    },
-    server: {
-      allowedHosts: ["1f90-182-253-124-97.ngrok-free.app"],
-      host: true, // Allow external access
-      port: 5173,
-    },
-    worker: {
-      format: 'es',
-    },
-  }
+    ]
+  };
 });
