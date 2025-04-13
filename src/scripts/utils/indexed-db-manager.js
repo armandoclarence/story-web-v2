@@ -146,7 +146,7 @@ export default class IndexedDBManager {
       };
 
       await new Promise((resolve, reject) => {
-        const request = store.put(entry);
+      const request = store.put(entry);
         request.onsuccess = () => resolve();
         request.onerror = () => reject(request.error);
       });
@@ -170,7 +170,7 @@ export default class IndexedDBManager {
         console.log('Cache Storage not available, using IndexedDB only');
       }
     } catch (error) {
-      console.error('Error caching API response:', error);
+        console.error('Error caching API response:', error);
       throw error;
     }
   }
@@ -198,7 +198,7 @@ export default class IndexedDBManager {
       const data = await new Promise((resolve, reject) => {
         const transaction = db.transaction([DB_CONFIG.stores.apiCache], 'readonly');
         const store = transaction.objectStore(DB_CONFIG.stores.apiCache);
-        const request = store.get(url);
+      const request = store.get(url);
 
         request.onsuccess = () => resolve(request.result?.data || null);
         request.onerror = () => reject(request.error);

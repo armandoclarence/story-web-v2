@@ -49,7 +49,7 @@ class Router {
   async registerServiceWorker() {
     if ('serviceWorker' in navigator) {
       try {
-        const registration = await navigator.serviceWorker.register('/sw.js', {
+        const registration = await navigator.serviceWorker.register('./sw.js', {
           scope: '/',
         });
 
@@ -181,7 +181,7 @@ class Router {
         return await IndexedDBManager.getAllFavorites();
       }
 
-      return null;
+      return true;
     } catch (error) {
       console.error('Error checking cached data:', error);
       return null;
