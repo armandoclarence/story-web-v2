@@ -74,21 +74,49 @@ export default class HomePage {
     const paginationContainer = document.getElementById('pagination-container');
     if (!paginationContainer) return;
 
+    let isLoading = false; // Track loading state
+
     paginationContainer.addEventListener('click', async (event) => {
-      if (event.target.closest('#prev-page')) {
-        if (this.#currentPage > 1) {
-          this.#currentPage--;
-          await this.#presenter.loadStories({
-            page: this.#currentPage,
-            size: this.#pageSize,
+      // Prevent clicks while loading
+      if (isLoading) return;
+
+      const prevButton = event.target.closest('#prev-page');
+      const nextButton = event.target.closest('#next-page');
+      
+      if (prevButton || nextButton) {
+        try {
+          isLoading = true;
+          // Disable both buttons and add loading state
+          const buttons = paginationContainer.querySelectorAll('button');
+          buttons.forEach(button => {
+            button.disabled = true;
+            button.classList.add('loading');
+          });
+
+          if (prevButton && this.#currentPage > 1) {
+            this.#currentPage--;
+            await this.#presenter.loadStories({
+              page: this.#currentPage,
+              size: this.#pageSize,
+            });
+          } else if (nextButton) {
+            this.#currentPage++;
+            await this.#presenter.loadStories({
+              page: this.#currentPage,
+              size: this.#pageSize,
+            });
+          }
+        } catch (error) {
+          console.error('Error loading stories:', error);
+        } finally {
+          isLoading = false;
+          // Re-enable buttons and remove loading state
+          const buttons = paginationContainer.querySelectorAll('button');
+          buttons.forEach(button => {
+            button.disabled = false;
+            button.classList.remove('loading');
           });
         }
-      } else if (event.target.closest('#next-page')) {
-        this.#currentPage++;
-        await this.#presenter.loadStories({
-          page: this.#currentPage,
-          size: this.#pageSize,
-        });
       }
     });
   }

@@ -5,14 +5,13 @@ export default class FavoriteManager {
   static #initialized = false;
 
   static async init(apiModel) {
-    if (this.#initialized) {
-      return;
-    }
+    if (this.#initialized) return;
 
     try {
       this.#apiModel = apiModel;
-      this.#initializeEventListeners();
+      await IndexedDBManager.init();
       this.#setupSyncListener();
+      this.#initializeEventListeners();
       this.#initialized = true;
       console.log('FavoriteManager initialized successfully');
     } catch (error) {
@@ -37,22 +36,59 @@ export default class FavoriteManager {
     };
   }
 
-  static async refreshFavorites() {
+  static async refreshFavorites(storyId = null) {
     try {
       const favorites = await this.getAllFavorites();
       console.log('Refreshed favorites:', favorites);
 
-      const favoritesList = document.getElementById('favorites-list');
-      if (favoritesList) {
-        // Trigger a re-render of the favorites list
-        const event = new CustomEvent('favorites-updated', { detail: favorites });
-        document.dispatchEvent(event);
+      // Update specific story if provided
+      if (storyId) {
+        const isFavorited = await this.isFavorite(storyId);
+        const buttons = document.querySelectorAll(`[data-story-id="${storyId}"]`);
+        buttons.forEach(button => this.#updateButtonState(button, isFavorited));
+        
+        // If we're on favorites page and the story was unfavorited, remove it
+        if (!isFavorited) {
+          const favoritesList = document.getElementById('favorites-list');
+          if (favoritesList) {
+            const storyItem = favoritesList.querySelector(`[data-story-id="${storyId}"]`).closest('.story-item');
+            if (storyItem) {
+              storyItem.classList.add('removing');
+              await new Promise(resolve => {
+                storyItem.addEventListener('transitionend', () => {
+                  storyItem.remove();
+                  resolve();
+                }, { once: true });
+              });
+
+              // Check if there are any stories left
+              const remainingStories = favoritesList.querySelectorAll('.story-item');
+              if (remainingStories.length === 0) {
+                favoritesList.innerHTML = '<p>Belum ada cerita favorit.</p>';
+                const paginationContainer = document.getElementById('pagination-container');
+                if (paginationContainer) {
+                  paginationContainer.innerHTML = '';
+                }
+              }
+            }
+          }
+        }
       } else {
-        console.warn('favorites-list element not found in the DOM.');
+        // Full refresh for favorites page
+        const favoritesList = document.getElementById('favorites-list');
+        if (favoritesList) {
+          const event = new CustomEvent('favorites-updated', { 
+            detail: {
+              favorites,
+              currentPage: 1, // Reset to first page on full refresh
+              pageSize: 10
+            }
+          });
+          document.dispatchEvent(event);
+        }
       }
     } catch (error) {
       console.error('Error refreshing favorites:', error);
-      // Optionally, you can dispatch an error event or show a user-friendly message
       const errorEvent = new CustomEvent('favorites-update-error', { detail: error });
       document.dispatchEvent(errorEvent);
     }
@@ -72,22 +108,10 @@ export default class FavoriteManager {
 
           if (isFavorited) {
             await this.removeFavorite(storyId);
-            // Remove from UI
-            favoriteButton.classList.remove('active');
-            const icon = favoriteButton.querySelector('i');
-            icon.classList.remove('fas');
-            icon.classList.add('far');
-            favoriteButton.setAttribute('aria-label', 'Add to favorites');
           } else {
             const story = await this.#getStoryById(storyId);
             if (story) {
               await this.addFavorite(story);
-              // Update UI
-              favoriteButton.classList.add('active');
-              const icon = favoriteButton.querySelector('i');
-              icon.classList.remove('far');
-              icon.classList.add('fas');
-              favoriteButton.setAttribute('aria-label', 'Remove from favorites');
             }
           }
         } catch (error) {
@@ -103,8 +127,9 @@ export default class FavoriteManager {
       throw new Error('FavoriteManager not initialized');
     }
     try {
-      await IndexedDBManager.addFavorite(story);
+      await IndexedDBManager.addToFavorites(story);
       console.log('Story added to favorites:', story.id);
+      await this.refreshFavorites();
     } catch (error) {
       console.error('Error adding favorite:', error);
       throw error;
@@ -116,10 +141,12 @@ export default class FavoriteManager {
       throw new Error('FavoriteManager not initialized');
     }
     try {
-      await IndexedDBManager.removeFavorite(storyId);
+      await IndexedDBManager.removeFromFavorites(storyId);
       console.log('Story removed from favorites:', storyId);
+      // Only refresh this specific story
+      await this.refreshFavorites(storyId);
     } catch (error) {
-      console.error('Error removing favorite:', error);P
+      console.error('Error removing favorite:', error);
       throw error;
     }
   }
@@ -166,27 +193,25 @@ export default class FavoriteManager {
       throw new Error('FavoriteManager not initialized');
     }
     try {
-      return await IndexedDBManager.getAllFavorites();
+      const favorites = await IndexedDBManager.getAllFavorites();
+      return favorites;
     } catch (error) {
       console.error('Error getting all favorites:', error);
       return [];
     }
   }
 
-  static async toggleFavorite(storyId) {
-    if (!this.#initialized) {
-      throw new Error('FavoriteManager not initialized');
-    }
+  static async toggleFavorite(story) {
     try {
-      const isFavorited = await this.isFavorite(storyId);
-      if (isFavorited) {
-        await this.removeFavorite(storyId);
+      const isFavorite = await IndexedDBManager.isFavorite(story.id);
+      
+      if (isFavorite) {
+        await IndexedDBManager.removeFromFavorites(story.id);
       } else {
-        const story = await this.#getStoryById(storyId);
-        if (story) {
-          await this.addFavorite(story);
+        await IndexedDBManager.addToFavorites(story);
         }
-      }
+
+      return !isFavorite;
     } catch (error) {
       console.error('Error toggling favorite:', error);
       throw error;
@@ -205,6 +230,15 @@ export default class FavoriteManager {
       icon?.classList.remove('fas');
       icon?.classList.add('far');
       button.setAttribute('aria-label', 'Add to favorites');
+    }
+  }
+
+  static async getFavorites(userId) {
+    try {
+      return await IndexedDBManager.getFavorites(userId);
+    } catch (error) {
+      console.error('Error getting favorites:', error);
+      return [];
     }
   }
 } 

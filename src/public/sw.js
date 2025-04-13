@@ -3,7 +3,7 @@ importScripts(
 );
 
 workbox.setConfig({
-  debug: false
+  debug: true
 });
 
 const { registerRoute, setCatchHandler } = workbox.routing;
@@ -95,7 +95,7 @@ setCatchHandler(async ({ request }) => {
           <meta charset="UTF-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <title>Offline - Story Web</title>
-          <link rel="stylesheet" href="/css/style.css">
+          <link rel="stylesheet" href="/css/styles/main.css">
           <link rel="stylesheet" href="/css/offline.css">
           <link rel="manifest" href="/manifest.json">
           <meta name="theme-color" content="#2193b0">
@@ -111,9 +111,9 @@ setCatchHandler(async ({ request }) => {
                 <img src="/images/logo.png" alt="Story Web Logo" class="navbar-logo">
               </a>
               <ul class="navbar-menu">
-                <li><a href="/">Home</a></li>
-                <li><a href="/favorites">Favorites</a></li>
-                <li><a href="/login" class="active">Login</a></li>
+                <li><a href="/#">Home</a></li>
+                <li><a href="/#/favorites">Favorites</a></li>
+                <li><a href="/#/login" class="active">Login</a></li>
               </ul>
             </div>
           </nav>
@@ -163,10 +163,13 @@ const bgSyncPlugin = new BackgroundSyncPlugin('storyWebQueue', {
 
 // Handle push notifications
 self.addEventListener('push', (event) => {
+  console.log('Push event received:', event);
   let notificationData;
   try {
     notificationData = event.data.json();
+    console.log('Notification data:', notificationData);
   } catch (e) {
+    console.error('Error parsing push data:', e);
     notificationData = {
       title: 'New Story',
       options: {
@@ -176,7 +179,7 @@ self.addEventListener('push', (event) => {
   }
   
   const options = {
-    body: notificationData.options.body,
+    body: notificationData.options?.body || 'New content available',
     icon: '/icon.png',
     badge: '/icon.png',
     vibrate: [100, 50, 100],
@@ -193,8 +196,11 @@ self.addEventListener('push', (event) => {
     requireInteraction: true,
   };
 
+  console.log('Showing notification with options:', options);
   event.waitUntil(
     self.registration.showNotification(notificationData.title, options)
+      .then(() => console.log('Notification shown successfully'))
+      .catch(error => console.error('Error showing notification:', error))
   );
 });
 
@@ -220,6 +226,7 @@ self.addEventListener('notificationclick', (event) => {
 
 // Add offline fallback
 self.addEventListener('install', (event) => {
+  console.log('Service Worker installed');
   const files = ['/offline.html'];
   event.waitUntil(
     caches.open('offline-cache').then((cache) => cache.addAll(files))
@@ -240,6 +247,7 @@ self.addEventListener('fetch', (event) => {
 
 // Skip waiting and claim clients
 self.addEventListener('activate', (event) => {
+  console.log('Service Worker activated');
   event.waitUntil(
     Promise.all([
       self.clients.claim(),
@@ -256,3 +264,58 @@ self.addEventListener('activate', (event) => {
     ])
   );
 });
+
+// Add workbox for better offline handling
+importScripts('https://storage.googleapis.com/workbox-cdn/releases/6.4.1/workbox-sw.js');
+
+// Cache the Google Fonts stylesheets with a stale-while-revalidate strategy.
+registerRoute(
+  /^https:\/\/fonts\.googleapis\.com/,
+  new StaleWhileRevalidate({
+    cacheName: 'google-fonts-stylesheets',
+  })
+);
+
+// Cache the underlying font files with a cache-first strategy for 1 year.
+registerRoute(
+  /^https:\/\/fonts\.gstatic\.com/,
+  new CacheFirst({
+    cacheName: 'google-fonts-webfonts',
+    plugins: [
+      new workbox.cacheableResponse.CacheableResponsePlugin({
+        statuses: [0, 200],
+      }),
+      new ExpirationPlugin({
+        maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
+        maxEntries: 30,
+      }),
+    ],
+  })
+);
+
+// Cache images
+registerRoute(
+  /\.(?:png|gif|jpg|jpeg|webp|svg)$/,
+  new CacheFirst({
+    cacheName: 'images',
+    plugins: [
+      new ExpirationPlugin({
+        maxEntries: 60,
+        maxAgeSeconds: 30 * 24 * 60 * 60, // 30 Days
+      }),
+    ],
+  })
+);
+
+// Cache pages
+registerRoute(
+  ({ request }) => request.mode === 'navigate',
+  new NetworkFirst({
+    cacheName: 'pages',
+    plugins: [
+      new ExpirationPlugin({
+        maxEntries: 50,
+      }),
+    ],
+  })
+);

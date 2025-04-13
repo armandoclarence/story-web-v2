@@ -1,11 +1,9 @@
 import { storyMapper } from '../../data/api-mapper';
-import { generateStoryItemTemplate, generatePaginationTemplate } from '../../templates';
+import { generateStoryItemTemplate } from '../../templates';
 import FavoritesPresenter from './favorites-presenter';
 import * as StoryAPI from '../../data/api';
 import FavoriteManager from '../../utils/favorite-manager';
-
 export default class FavoritesPage {
-  #currentPage = 1;
   #pageSize = 10;
   #presenter;
 
@@ -28,37 +26,146 @@ export default class FavoritesPage {
     await FavoriteManager.init(StoryAPI);
 
     // Add listener for favorites updates
-    document.addEventListener('favorites-updated', async (event) => {
-      await this.showFavorites(event.detail);
+    document.addEventListener('favorites-updated', async () => {
+      await this.#presenter.loadFavorites();
     });
 
-    await this.#presenter.loadFavorites({
-      page: this.#currentPage,
-      size: this.#pageSize
-    });
-    this.#initializePagination();
+    await this.#presenter.loadFavorites();
     this.#initializeFavorites();
   }
 
-  #initializePagination() {
+  async showFavorites(favorites, showPagination) {
+    const favoritesList = document.getElementById('favorites-list');
     const paginationContainer = document.getElementById('pagination-container');
-    if (!paginationContainer) return;
 
-    paginationContainer.addEventListener('click', async (event) => {
-      if (event.target.closest('#prev-page')) {
-        if (this.#currentPage > 1) {
-          this.#currentPage--;
-          await this.#presenter.loadFavorites({
-            page: this.#currentPage,
-            size: this.#pageSize,
-          });
-        }
-      } else if (event.target.closest('#next-page')) {
-        this.#currentPage++;
-        await this.#presenter.loadFavorites({
-          page: this.#currentPage,
-          size: this.#pageSize,
+    if (!favorites || favorites.length === 0) {
+      if (favoritesList) {
+        favoritesList.innerHTML = '<p>Belum ada cerita favorit.</p>';
+      }
+      if (paginationContainer) {
+        paginationContainer.innerHTML = '';
+      }
+      return;
+    }
+
+    try {
+      // Only show first 10 items
+      const displayedFavorites = favorites.slice(0, this.#pageSize);
+
+      const templates = await Promise.all(displayedFavorites.map(async story => {
+        const storyMapped = await storyMapper(story);
+        return generateStoryItemTemplate({
+          ...storyMapped,
+          isFavorited: true,
         });
+      }));
+
+      if (favoritesList) {
+        favoritesList.innerHTML = templates.join('');
+        // Add animation effect
+        setTimeout(() => {
+          const storyItems = favoritesList.querySelectorAll('.story-item');
+          storyItems.forEach((item, index) => {
+            item.style.opacity = '0';
+            item.style.transform = 'translateY(20px)';
+            setTimeout(() => {
+              item.style.opacity = '1';
+              item.style.transform = 'translateY(0)';
+            }, index * 100);
+          });
+        }, 50);
+      }
+      
+      // Show pagination only if there are more than 10 items
+      if (paginationContainer) {
+        if (showPagination) {
+          paginationContainer.innerHTML = `
+            <div class="pagination">
+              <button class="load-more-button">
+                <span>Muat Lebih Banyak</span>
+                <i class="fas fa-chevron-down"></i>
+              </button>
+            </div>
+          `;
+          this.#initializeLoadMore(favorites);
+        } else {
+          paginationContainer.innerHTML = '';
+        }
+      }
+    } catch (error) {
+      console.error('Error showing favorites:', error);
+      if (favoritesList) {
+        favoritesList.innerHTML = '<p>Terjadi kesalahan saat memuat cerita favorit.</p>';
+      }
+      if (paginationContainer) {
+        paginationContainer.innerHTML = '';
+      }
+    }
+  }
+
+  #initializeLoadMore(allFavorites) {
+    const loadMoreButton = document.querySelector('.load-more-button');
+    if (!loadMoreButton) return;
+
+    let isLoading = false; // Track loading state
+
+    loadMoreButton.addEventListener('click', async () => {
+      // Prevent multiple clicks while loading
+      if (isLoading) return;
+
+      try {
+        isLoading = true;
+        // Add loading state
+        loadMoreButton.classList.add('loading');
+        loadMoreButton.disabled = true; // Disable button while loading
+        const buttonText = loadMoreButton.querySelector('span');
+        buttonText.textContent = 'Memuat...';
+
+        const currentItems = document.querySelectorAll('.story-item').length;
+        const nextItems = allFavorites.slice(currentItems, currentItems + this.#pageSize);
+        
+        if (nextItems.length > 0) {
+          // Add artificial delay to prevent too rapid loading
+          await new Promise(resolve => setTimeout(resolve, 500));
+
+          const templates = await Promise.all(nextItems.map(async story => {
+            const storyMapped = await storyMapper(story);
+            return generateStoryItemTemplate({
+              ...storyMapped,
+              isFavorited: true,
+            });
+          }));
+
+          const favoritesList = document.getElementById('favorites-list');
+          const tempContainer = document.createElement('div');
+          tempContainer.innerHTML = templates.join('');
+          
+          // Add new items with animation
+          Array.from(tempContainer.children).forEach((item, index) => {
+            item.style.opacity = '0';
+            item.style.transform = 'translateY(20px)';
+            favoritesList.appendChild(item);
+            
+            setTimeout(() => {
+              item.style.opacity = '1';
+              item.style.transform = 'translateY(0)';
+            }, index * 100);
+          });
+
+          // Hide load more button if no more items
+          if (currentItems + nextItems.length >= allFavorites.length) {
+            loadMoreButton.style.display = 'none';
+          }
+        }
+      } catch (error) {
+        console.error('Error loading more items:', error);
+      } finally {
+        // Reset loading state
+        isLoading = false;
+        loadMoreButton.classList.remove('loading');
+        loadMoreButton.disabled = false;
+        const buttonText = loadMoreButton.querySelector('span');
+        buttonText.textContent = 'Muat Lebih Banyak';
       }
     });
   }
@@ -76,33 +183,30 @@ export default class FavoritesPage {
 
       try {
         if (favoriteButton.classList.contains('active')) {
-          await this.#presenter.toggleFavorite(storyId);
-          // Remove the story item from the UI with animation
-          const storyItem = favoriteButton.closest('.story-item');
-          if (storyItem) {
-            // Add removing class to trigger animation
-            storyItem.classList.add('removing');
-            
-            // Wait for the animation to complete before removing the element
-            await new Promise(resolve => {
-              storyItem.addEventListener('transitionend', () => {
-                storyItem.remove();
-                resolve();
-              }, { once: true });
-            });
-          }
-          
-          // Check if there are any stories left
-          const remainingStories = storiesList.querySelectorAll('.story-item');
-          if (remainingStories.length === 0) {
-            // Add a small delay before showing the empty state
-            setTimeout(() => {
-              storiesList.innerHTML = '<p>Belum ada cerita favorit.</p>';
-              const paginationContainer = document.getElementById('pagination-container');
-              if (paginationContainer) {
-                paginationContainer.innerHTML = '';
+          const removed = await this.#presenter.toggleFavorite(storyId);
+          if (removed) {
+            const storyItem = favoriteButton.closest('.story-item');
+            if (storyItem) {
+              storyItem.classList.add('removing');
+              await new Promise(resolve => {
+                storyItem.addEventListener('transitionend', () => {
+                  storyItem.remove();
+                  resolve();
+                }, { once: true });
+              });
+
+              // Check if there are any stories left
+              const remainingStories = storiesList.querySelectorAll('.story-item');
+              if (remainingStories.length === 0) {
+                storiesList.innerHTML = '<p>Belum ada cerita favorit.</p>';
+                const paginationContainer = document.getElementById('pagination-container');
+                if (paginationContainer) {
+                  paginationContainer.innerHTML = '';
+                }
               }
-            }, 300); // Match the transition duration
+              // Reload favorites to update the list and pagination
+              await this.#presenter.loadFavorites();
+            }
           }
         }
       } catch (error) {
@@ -110,60 +214,5 @@ export default class FavoritesPage {
         alert('Gagal menghapus cerita dari favorit.');
       }
     });
-  }
-
-  async showFavorites(favorites) {
-    const favoritesList = document.getElementById('favorites-list');
-    const paginationContainer = document.getElementById('pagination-container');
-
-    if (!favorites || favorites.length === 0) {
-      if (favoritesList) {
-        favoritesList.innerHTML = '<p>Belum ada cerita favorit.</p>';
-      }
-      if (paginationContainer) {
-        paginationContainer.innerHTML = '';
-      }
-      return;
-    }
-
-    try {
-      const templates = await Promise.all(favorites.map(async story => {
-        const storyMapped = await storyMapper(story);
-        const isFavorited = await FavoriteManager.isFavorite(story.id);
-        return generateStoryItemTemplate({
-          ...storyMapped,
-          isFavorited,
-        });
-      }));
-
-      if (favoritesList) {
-        favoritesList.innerHTML = templates.join('');
-        // Add a small delay to ensure the DOM is updated before adding the fade-in effect
-        setTimeout(() => {
-          const storyItems = favoritesList.querySelectorAll('.story-item');
-          storyItems.forEach((item, index) => {
-            item.style.opacity = '0';
-            item.style.transform = 'translateY(20px)';
-            setTimeout(() => {
-              item.style.opacity = '1';
-              item.style.transform = 'translateY(0)';
-            }, index * 100); // Stagger the animations
-          });
-        }, 50);
-      }
-      
-      if (paginationContainer) {
-        const isLastPage = favorites.length < this.#pageSize;
-        paginationContainer.innerHTML = generatePaginationTemplate(this.#currentPage, isLastPage);
-      }
-    } catch (error) {
-      console.error('Error showing favorites:', error);
-      if (favoritesList) {
-        favoritesList.innerHTML = '<p>Terjadi kesalahan saat memuat cerita favorit.</p>';
-      }
-      if (paginationContainer) {
-        paginationContainer.innerHTML = '';
-      }
-    }
   }
 }

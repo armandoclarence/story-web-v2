@@ -671,3 +671,152 @@ footer .brand-name__link:hover i {
   -ms-zoom: 1;
   zoom: 1;
 }
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  margin: 2rem 0;
+}
+
+/* Add these styles to your CSS */
+.pagination button {
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.pagination button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.pagination button.loading {
+  padding-right: 2.5rem; /* Make space for the spinner */
+}
+
+.pagination button.loading::after {
+  content: '';
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  top: 50%;
+  right: 12px;
+  margin-top: -8px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: #fff;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Optional: Add hover effect for non-disabled buttons */
+.pagination button:not(:disabled):hover {
+  background-color: #34495E;
+  transform: translateY(-2px);
+}
+
+.pagination button:not(:disabled):active {
+  transform: translateY(0);
+}
+
+.load-more-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background-color: #2D3E50;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+.load-more-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Loading spinner animation */
+.load-more-button.loading::after {
+  content: '';
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  top: 50%;
+  right: 12px;
+  margin-top: -8px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: #fff;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Adjust text position when loading */
+.load-more-button.loading span {
+  margin-right: 24px;
+}
+
+.load-more-button:hover {
+  background-color: #34495E;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.load-more-button:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.load-more-button i {
+  font-size: 0.875rem;
+  transition: transform 0.3s ease;
+}
+
+.load-more-button:hover i {
+  transform: translateY(2px);
+}
+
+/* Loading state */
+.load-more-button.loading {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+.load-more-button.loading i {
+  animation: bounce 1s infinite;
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(3px);
+  }
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .load-more-button {
+    padding: 0.625rem 1.25rem;
+    font-size: 0.875rem;
+  }
+}

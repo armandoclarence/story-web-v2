@@ -1,13 +1,21 @@
-import CONFIG from '../config';
 import routes from '../routes/routes';
 import { getActiveRoute, parseActivePathname } from '../routes/url-parser';
 import { getAccessToken } from './auth';
 import IndexedDBManager from './indexed-db-manager';
+import { transitionHelper } from '../utils';
 
 class Router {
   constructor() {
     this.lastAttemptedHash = null;
-    this.init();
+    this.hashChangeCallbacks = [];
+    this.content = null;
+    this.app = null;
+  }
+
+  // Method to set the app instance
+  setApp(app) {
+    this.app = app;
+    this.content = app.getContent();
   }
 
   init() {
@@ -15,8 +23,10 @@ class Router {
       this.handleRoute();
     });
 
-    window.addEventListener('hashchange', () => {
-      this.handleRoute();
+    window.addEventListener('hashchange', async (event) => {
+      event.preventDefault();
+      await this.handleRoute();
+      this.hashChangeCallbacks.forEach(callback => callback());
     });
 
     window.addEventListener('online', () => {
@@ -31,6 +41,40 @@ class Router {
       document.body.classList.add('offline-mode');
       this.lastAttemptedHash = window.location.hash;
     });
+
+    // Register service worker for both development and production
+    this.registerServiceWorker();
+  }
+
+  async registerServiceWorker() {
+    if ('serviceWorker' in navigator) {
+      try {
+        const registration = await navigator.serviceWorker.register('/sw.js', {
+          scope: '/',
+        });
+
+        // Handle updates
+        registration.addEventListener('updatefound', () => {
+          const newWorker = registration.installing;
+          newWorker.addEventListener('statechange', () => {
+            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              if (confirm('Ada konten baru tersedia! Klik OK untuk memperbarui.')) {
+                window.location.reload();
+              }
+            }
+          });
+        });
+
+        console.log('Service Worker berhasil didaftarkan');
+      } catch (error) {
+        console.error('Gagal mendaftarkan Service Worker:', error);
+      }
+    }
+  }
+
+  // Method to register hash change callbacks
+  onHashChange(callback) {
+    this.hashChangeCallbacks.push(callback);
   }
 
   async handleRoute() {
@@ -38,26 +82,23 @@ class Router {
     const urlSegments = parseActivePathname();
     
     try {
-      // Check if route exists
       const route = routes[url];
       if (!route) {
         window.location.hash = '#/404';
         return;
       }
 
-      const page = route();
+      const page = await route();
       if (!page) {
         window.location.hash = '#/404';
         return;
       }
 
-      // Handle offline state
       if (!navigator.onLine) {
         await this.handleOfflineRoute(urlSegments, page);
         return;
       }
 
-      // Handle authentication
       const isAuthenticated = !!getAccessToken();
       if (page.requiresAuth && !isAuthenticated) {
         window.location.hash = '#/login';
@@ -69,13 +110,50 @@ class Router {
         return;
       }
 
-      // Render page
-      await this.renderPage(page);
+      await this.renderPageWithTransition(page);
+      // Let the app handle navigation updates
+      if (this.app) {
+        this.app.updateNavigation();
+      }
 
     } catch (error) {
       console.error('Route handling error:', error);
       window.location.hash = '#/404';
     }
+  }
+
+  async renderPageWithTransition(page, cachedData = null) {
+    if (!this.content) return;
+
+    if (navigator.onLine) {
+      const banner = document.querySelector('.offline-banner');
+      if (banner) banner.remove();
+    }
+
+    const transition = transitionHelper({
+      updateDOM: async () => {
+        window.scrollTo(0, 0);
+        
+        try {
+          this.content.style.opacity = '0';
+          this.content.innerHTML = await page.render(cachedData);
+          
+          requestAnimationFrame(() => {
+            this.content.style.opacity = '1';
+          });
+          
+          if (page.afterRender) {
+            await page.afterRender();
+          }
+        } catch (error) {
+          console.error('Error rendering page:', error);
+          this.content.innerHTML = '<h1>Error loading page</h1>';
+        }
+      }
+    });
+
+    transition.ready.catch(console.error);
+    return transition.updateCallbackDone;
   }
 
   async handleOfflineRoute(urlSegments, page) {
@@ -86,12 +164,11 @@ class Router {
       if (cachedData) {
         await this.renderWithOfflineIndicator(page, cachedData);
       }
-      
       return;
     }
 
     // Page works offline, render normally
-    await this.renderPage(page);
+    await this.renderPageWithTransition(page);
   }
 
   async checkCachedData(urlSegments) {
@@ -113,7 +190,7 @@ class Router {
 
   async renderWithOfflineIndicator(page, cachedData) {
     this.showOfflineBanner();
-    await this.renderPage(page, cachedData);
+    await this.renderPageWithTransition(page, cachedData);
   }
 
   showOfflineBanner() {
@@ -133,34 +210,6 @@ class Router {
       });
 
       document.body.insertBefore(banner, document.body.firstChild);
-    }
-  }
-
-  async renderPage(page, cachedData = null) {
-    const content = document.querySelector('#mainContent');
-    if (!content) return;
-
-    // Remove offline banner if online
-    if (navigator.onLine) {
-      const banner = document.querySelector('.offline-banner');
-      if (banner) banner.remove();
-    }
-
-    // Use transition helper from your app.js
-    content.style.opacity = '0';
-    
-    try {
-      content.innerHTML = await page.render(cachedData);
-      requestAnimationFrame(() => {
-        content.style.opacity = '1';
-      });
-      
-      if (page.afterRender) {
-        await page.afterRender();
-      }
-    } catch (error) {
-      console.error('Error rendering page:', error);
-      content.innerHTML = '<h1>Error loading page</h1>';
     }
   }
 }

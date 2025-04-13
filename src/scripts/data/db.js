@@ -1,54 +1,51 @@
 import IndexedDBManager from "../utils/indexed-db-manager";
 
-const DB_NAME = 'StoryAppDB';
-const STORE_NAME = 'favorites';
-const DB_VERSION = 2;
-const API_CACHE_STORE_NAME = 'apiCache';
-const CACHE_NAME = 'api-cache-v1';
+export const DB_CONFIG = {
+  name: 'StoryAppDB',
+  version: 2,
+  stores: {
+    favorites: 'favorites',
+    apiCache: 'apiCache'
+  }
+};
 
 export function initDB() {
   return new Promise((resolve, reject) => {
-    console.log('Opening IndexedDB...'); // Debug log
-    const request = indexedDB.open(DB_NAME, DB_VERSION);
+    console.log('Opening IndexedDB...');
+    const request = indexedDB.open(DB_CONFIG.name, DB_CONFIG.version);
 
     request.onupgradeneeded = (event) => {
-      console.log('Database upgrade needed...'); // Debug log
+      console.log('Database upgrade needed...');
       const db = event.target.result;
       
       // Log existing object stores
       console.log('Existing stores:', Array.from(db.objectStoreNames));
       
       // Create favorites store if it doesn't exist
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        console.log('Creating favorites store...'); // Debug log
-        const favoritesStore = db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+      if (!db.objectStoreNames.contains(DB_CONFIG.stores.favorites)) {
+        console.log('Creating favorites store...');
+        const favoritesStore = db.createObjectStore(DB_CONFIG.stores.favorites, { 
+          keyPath: 'storyId'
+        });
         favoritesStore.createIndex('updatedAt', 'updatedAt', { unique: false });
       }
 
       // Create apiCache store if it doesn't exist
-      if (!db.objectStoreNames.contains(API_CACHE_STORE_NAME)) {
-        console.log('Creating apiCache store...'); // Debug log
-        try {
-          const apiStore = db.createObjectStore(API_CACHE_STORE_NAME, { 
-            keyPath: 'url' 
-          });
-          apiStore.createIndex('timestamp', 'timestamp', { unique: false });
-          apiStore.createIndex('type', 'type', { unique: false });
-          console.log('API Cache store created successfully');
-        } catch (error) {
-          console.error('Error creating apiCache store:', error);
-        }
+      if (!db.objectStoreNames.contains(DB_CONFIG.stores.apiCache)) {
+        console.log('Creating apiCache store...');
+        const apiStore = db.createObjectStore(DB_CONFIG.stores.apiCache, { 
+          keyPath: 'url' 
+        });
+        apiStore.createIndex('timestamp', 'timestamp', { unique: false });
+        apiStore.createIndex('type', 'type', { unique: false });
       }
 
-      // Verify stores after creation
       console.log('Final stores:', Array.from(db.objectStoreNames));
     };
 
     request.onsuccess = (event) => {
       const db = event.target.result;
-      // Verify stores are present
-      const stores = Array.from(db.objectStoreNames);
-      console.log('Database opened successfully. Available stores:', stores);
+      console.log('Database opened successfully. Available stores:', Array.from(db.objectStoreNames));
       resolve(db);
     };
 
@@ -66,12 +63,12 @@ export function initDB() {
 
 export function openDB() {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, DB_VERSION);
+    const request = indexedDB.open(DB_CONFIG.name, DB_CONFIG.version);
 
     request.onupgradeneeded = (event) => {
       const db = event.target.result;
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+      if (!db.objectStoreNames.contains(DB_CONFIG.stores.favorites)) {
+        db.createObjectStore(DB_CONFIG.stores.favorites, { keyPath: 'id' });
       }
     };
 
@@ -83,8 +80,8 @@ export function openDB() {
 export async function addStory(story) {
   return new Promise(async (resolve, reject) => {
     const db = await openDB();
-    const transaction = db.transaction([STORE_NAME], 'readwrite');
-    const store = transaction.objectStore(STORE_NAME);
+    const transaction = db.transaction([DB_CONFIG.stores.favorites], 'readwrite');
+    const store = transaction.objectStore(DB_CONFIG.stores.favorites);
     
     // Store complete story data
     const favoriteEntry = {
@@ -121,8 +118,8 @@ export async function addStory(story) {
 export async function removeStoryById(id) {
   return new Promise(async (resolve, reject) => {
     const db = await openDB();
-    const transaction = db.transaction([STORE_NAME], 'readwrite');
-    const store = transaction.objectStore(STORE_NAME);
+    const transaction = db.transaction([DB_CONFIG.stores.favorites], 'readwrite');
+    const store = transaction.objectStore(DB_CONFIG.stores.favorites);
     
     const request = store.get(id);
     
@@ -133,7 +130,7 @@ export async function removeStoryById(id) {
         deleteRequest.onsuccess = async () => {
           try {
             // Remove from Workbox cache
-            const cache = await caches.open(CACHE_NAME);
+            const cache = await caches.open('api-cache-v1');
             await cache.delete(`/api/stories/${id}`);
             
             // Broadcast the change
@@ -168,8 +165,8 @@ export async function removeStoryById(id) {
 export async function getAllStories() {
   return new Promise(async (resolve, reject) => {
     const db = await openDB();
-    const tx = db.transaction(STORE_NAME, 'readonly');
-    const store = tx.objectStore(STORE_NAME);
+    const tx = db.transaction(DB_CONFIG.stores.favorites, 'readonly');
+    const store = tx.objectStore(DB_CONFIG.stores.favorites);
     const stories = await store.getAll();
     db.close();
     stories.onsuccess = () => {
@@ -187,8 +184,8 @@ export async function getAllStories() {
 export async function getStoryById(id) {
   return new Promise(async (resolve, reject) => {
     const db = await openDB();
-    const tx = db.transaction(STORE_NAME, 'readonly');
-    const store = tx.objectStore(STORE_NAME);
+    const tx = db.transaction(DB_CONFIG.stores.favorites, 'readonly');
+    const store = tx.objectStore(DB_CONFIG.stores.favorites);
     
     const request = store.get(id);
     
