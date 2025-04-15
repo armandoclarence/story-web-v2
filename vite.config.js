@@ -11,7 +11,7 @@ export default defineConfig(({ mode }) => {
     base,
     root: './', // Set root to current directory
     build: {
-      outDir: 'dist',
+      outDir: 'docs',
       emptyOutDir: true,
       cssCodeSplit: false, // This will combine all CSS into one file
       rollupOptions: {
