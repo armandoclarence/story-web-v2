@@ -19,9 +19,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Initialize navigation
   Navigation.init();
-
+  
   // Use the singleton Router to handle hash changes
   Router.onHashChange(() => {
+    Navigation.init();
     Camera.stopAllStreams();
   });
 

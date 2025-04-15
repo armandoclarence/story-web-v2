@@ -53,6 +53,7 @@ export default defineConfig(({ mode }) => {
           name: 'Story Web',
           short_name: 'StoryWeb',
           start_url: base,
+          id: base,
           display: 'standalone',
           background_color: '#ffffff',
           theme_color: '#2193b0',
@@ -100,29 +101,29 @@ export default defineConfig(({ mode }) => {
               src: 'screenshots/mobile-home.png',
               sizes: '390x844',
               type: 'image/png',
-              form_factor: "narrow",
-              platform: ["android", "ios", "kaios", "windows", "windows10x", "chrome_web_store", "play", "itunes", "microsoft-inbox", "microsoft-store"]
+              form_factor: 'narrow',
+              platform: ['android', 'ios', 'kaios', 'windows', 'windows10x', 'chrome_web_store', 'play', 'itunes', 'microsoft-inbox', 'microsoft-store']
             },
             {
               src: 'screenshots/mobile-story.png',
               sizes: '390x844',
               type: 'image/png',
-              form_factor: "narrow",
-              platform: ["android", "ios", "kaios", "windows", "windows10x", "chrome_web_store", "play", "itunes", "microsoft-inbox", "microsoft-store"]
+              form_factor: 'narrow',
+              platform: ['android', 'ios', 'kaios', 'windows', 'windows10x', 'chrome_web_store', 'play', 'itunes', 'microsoft-inbox', 'microsoft-store']
             },
             {
               src: 'screenshots/desktop-home.png',
               sizes: '1280x720',
               type: 'image/png',
-              form_factor: "wide",
-              platform: ["windows", "windows10x", "macos", "chrome_web_store", "microsoft-inbox", "microsoft-store"]
+              form_factor: 'wide',
+              platform: ['windows', 'windows10x', 'macos', 'chrome_web_store', 'microsoft-inbox', 'microsoft-store']
             },
             {
               src: 'screenshots/desktop-story.png',
               sizes: '1280x720',
               type: 'image/png',
-              form_factor: "wide",
-              platform: ["windows", "windows10x", "macos", "chrome_web_store", "microsoft-inbox", "microsoft-store"]
+              form_factor: 'wide',
+              platform: ['windows', 'windows10x', 'macos', 'chrome_web_store', 'microsoft-inbox', 'microsoft-store']
             }
           ],
           shortcuts: [
@@ -130,26 +131,26 @@ export default defineConfig(({ mode }) => {
               name: 'New Story',
               short_name: 'New',
               description: 'Tulis cerita baru sebagai pengguna',
-              url: '/?source=pwa#/new',
+              url: `${base}?source=pwa#/new`,
               icons: [{ src: 'icons/book.png', sizes: '128x128', type: 'image/png' }]
             },
             {
               name: 'New Story (Guest)',
               short_name: 'Guest',
               description: 'Tulis cerita sebagai tamu',
-              url: '/?source=pwa#/new-guest',
+              url: `${base}?source=pwa#/new-guest`,
               icons: [{ src: 'icons/book.png', sizes: '128x128', type: 'image/png' }]
             },
             {
-              "name": "Favorite",
-              "short_name": "Favorite",
-              "description": "Lihat daftar cerita favorit.",
-              "url": "/#?source=pwa/favorites",
-              "icons": [
+              'name': 'Favorite',
+              'short_name': 'Favorite',
+              'description': 'Lihat daftar cerita favorit.',
+              'url': `${base}#?source=pwa/favorites`,
+              'icons': [
                 {
-                  "src": "icons/heart.png",
-                  "type": "image/png",
-                  "sizes": "512x512"
+                  'src': 'icons/heart.png',
+                  'type': 'image/png',
+                  'sizes': '512x512'
                 }
               ]
             }

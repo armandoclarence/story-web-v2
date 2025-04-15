@@ -44,37 +44,7 @@ class Router {
       this.lastAttemptedHash = window.location.hash;
     });
 
-    // Register service worker for both development and production
-    this.registerServiceWorker();
-
     this.setupNavigationHandlers();
-  }
-
-  async registerServiceWorker() {
-    if ('serviceWorker' in navigator) {
-      try {
-        const swPath = this.isGitHubPages ? '/story-web-v2/registerSW.js' : '/registerSW.js';
-        
-        const registration = await navigator.serviceWorker.register(swPath, {
-          scope: this.isGitHubPages ? '/story-web-v2/' : '/'
-        });
-
-        registration.addEventListener('updatefound', () => {
-          const newWorker = registration.installing;
-          newWorker.addEventListener('statechange', () => {
-            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-              if (confirm('Ada konten baru tersedia! Klik OK untuk memperbarui.')) {
-                window.location.reload();
-              }
-            }
-          });
-        });
-
-        console.log('Service Worker berhasil didaftarkan');
-      } catch (error) {
-        console.error('Gagal mendaftarkan Service Worker:', error);
-      }
-    }
   }
 
   // Method to register hash change callbacks
