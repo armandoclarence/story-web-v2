@@ -164,26 +164,23 @@ export default class NotificationManager {
 
   static async checkSubscription() {
     try {
-      // First check localStorage
-      const storedSubscription = localStorage.getItem('pushSubscription');
-      if (storedSubscription) {
-        // If we have stored subscription, consider it as subscribed
-        return true;
-      }
-      
-      // If no stored subscription, check current subscription
+      // Get current browser's subscription
       const serviceWorkerRegistration = await navigator.serviceWorker?.ready;
-      const subscription = await serviceWorkerRegistration?.pushManager.getSubscription();
+      const currentSubscription = await serviceWorkerRegistration?.pushManager.getSubscription();
       
-      if (subscription) {
-        // Store valid subscription if found
-        localStorage.setItem('pushSubscription', JSON.stringify(subscription));
+      console.log('Current subscription:', currentSubscription);
+
+      if (currentSubscription) {
+        // If we have an active subscription, store it and return true
+        localStorage.setItem('pushSubscription', JSON.stringify(currentSubscription));
         return true;
+      } else {
+        // No active subscription, clean up localStorage
+        localStorage.removeItem('pushSubscription');
+        return false;
       }
-      
-      return false;
     } catch (error) {
-      console.error('Error checking subscription:', error);
+      console.error('Error checking subscription status:', error);
       return false;
     }
   }
@@ -207,9 +204,17 @@ export default class NotificationManager {
     console.log('Subscribing to push messages');
     try {
       const serviceWorkerRegistration = await navigator.serviceWorker?.ready;
+      
+      // Check if there's an existing subscription first
+      const existingSubscription = await serviceWorkerRegistration?.pushManager.getSubscription();
+      if (existingSubscription) {
+        // If subscription exists, just store it and return
+        localStorage.setItem('pushSubscription', JSON.stringify(existingSubscription));
+        this.updateSubscribeButtonState(subscribeButton, true);
+        return existingSubscription;
+      }
 
-      // Add logging for debugging
-      console.log('Creating push subscription...');
+      console.log('Creating new push subscription...');
       const pushSubscription = await serviceWorkerRegistration?.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: convertBase64ToUint8Array(CONFIG.VAPID_PUBLIC_KEY)
@@ -218,14 +223,13 @@ export default class NotificationManager {
       const data = pushSubscription.toJSON();
       console.log('Push subscription created:', data);
 
-      // Log the API call
       console.log('Sending subscription to server...');
       const response = await this.#apiModel.subscribePushNotification({
         endpoint: data.endpoint,
         keys: {
           p256dh: data.keys.p256dh,
           auth: data.keys.auth,
-        },
+        }
       });
       console.log('Server response:', response);
 
@@ -235,8 +239,7 @@ export default class NotificationManager {
       console.log('Successfully subscribed to push messages');
       return pushSubscription;
     } catch (error) {
-      console.error('Gagal melakukan subscribe:', error.message);
-      console.error('Full error:', error); // Log full error
+      console.error('Failed to subscribe:', error);
       localStorage.removeItem('pushSubscription');
       throw error;
     }
@@ -249,44 +252,23 @@ export default class NotificationManager {
       if (storedSubscription) {
         const parsedSubscription = JSON.parse(storedSubscription);
         
-        // Unsubscribe from server using stored data
+        // Unsubscribe from server using stored endpoint
         await this.#apiModel.unsubscribePushNotification({
-          endpoint: parsedSubscription.endpoint,
+          endpoint: parsedSubscription.endpoint
         });
-        
-        // Clear localStorage
-        localStorage.removeItem('pushSubscription');
-        
-        // Also try to unsubscribe from service worker if available
-        try {
-          const serviceWorkerRegistration = await navigator.serviceWorker?.ready;
-          const subscription = await serviceWorkerRegistration?.pushManager.getSubscription();
-          if (subscription) {
-            await subscription.unsubscribe();
-          }
-        } catch (swError) {
-          console.warn('Could not unsubscribe from service worker:', swError);
-          // Continue anyway since we've already unsubscribed from server
-        }
-        
-        this.updateSubscribeButtonState(subscribeButton, false);
-        return;
       }
-
-      // Fallback to old behavior if no localStorage data
+      
+      // Then clean up local subscription
       const serviceWorkerRegistration = await navigator.serviceWorker?.ready;
       const subscription = await serviceWorkerRegistration?.pushManager.getSubscription();
       if (subscription) {
-        await this.#apiModel.unsubscribePushNotification({
-          endpoint: subscription.endpoint,
-        });
         await subscription.unsubscribe();
       }
       
       localStorage.removeItem('pushSubscription');
       this.updateSubscribeButtonState(subscribeButton, false);
     } catch (error) {
-      console.error('Gagal melakukan unsubscribe:', error.message);
+      console.error('Failed to unsubscribe:', error);
       throw error;
     }
   }
@@ -300,7 +282,6 @@ export default class NotificationManager {
       const unsubscribeButton = button.querySelector('#unsubscribe-button');
       if (unsubscribeButton) {
         unsubscribeButton.addEventListener('click', async () => {
-          console.log('masuk sini1');
           await this.unsubscribePushMessage(button);
         });
       }
@@ -309,7 +290,6 @@ export default class NotificationManager {
       const subscribeButton = button.querySelector('#subscribe-button');
       if (subscribeButton) {
         subscribeButton.addEventListener('click', async () => {
-          console.log('masuk sini2');
           const isPermissionGranted = await this.requestPermission();
           if (isPermissionGranted) {
             await this.subscribePushMessage(button);

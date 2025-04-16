@@ -16,7 +16,7 @@ export default defineConfig(({ mode }) => {
       cssCodeSplit: false, // This will combine all CSS into one file
       rollupOptions: {
         input: {
-          main: resolve(__dirname, 'index.html')
+          main: resolve(__dirname, 'index.html'),
         },
         output: {
           assetFileNames: (assetInfo) => {
@@ -47,8 +47,12 @@ export default defineConfig(({ mode }) => {
     },
     plugins: [
       VitePWA({
-        registerType: 'autoUpdate',
-        injectRegister: 'auto',
+        strategies: 'injectManifest',  // Enable injectManifest strategy
+        srcDir: './',
+        injectManifest: {
+          swSrc: resolve(__dirname, 'sw.js'), // Point to your custom sw.js file
+        },
+        injectRegister: false, // Disable auto registration, you will handle registration manually
         manifest: {
           name: 'Story Web',
           short_name: 'StoryWeb',
@@ -156,23 +160,6 @@ export default defineConfig(({ mode }) => {
             }
           ]
         },
-        workbox: {
-          globPatterns: ['**/*.{js,css,html,ico,png,svg,webp}'],
-          navigateFallback: null,
-          runtimeCaching: [
-            {
-              urlPattern: /^https:\/\/story-api\.dicoding\.dev\/v1\//,
-              handler: 'NetworkFirst',
-              options: {
-                cacheName: 'api-cache',
-                expiration: {
-                  maxEntries: 100,
-                  maxAgeSeconds: 24 * 60 * 60
-                }
-              }
-            }
-          ]
-        }
       })
     ]
   };
