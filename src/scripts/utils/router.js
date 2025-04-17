@@ -78,13 +78,21 @@ class Router {
         await this.handleRoute();
         return;
       }
-      
-      // If already authenticated and on login page, redirect to home
-      if (isAuthenticated && url === '/login') {
-        window.location.hash = '#/';
-        return;
+
+      if (!navigator.onLine && isAuthenticated) {
+        if (['/login', '/register', '/new-guest'].includes(url)) {
+          window.location.hash = '#/';
+          return;
+        }
       }
-      
+
+      if (!navigator.onLine && !isAuthenticated) {
+        if (['/', '/favorites', '/new'].includes(url)) {
+          window.location.hash = '#/login';
+          return;
+        }
+      }
+
       const route = routes[url];
       if (!route) {
         window.location.hash = '#/404';
