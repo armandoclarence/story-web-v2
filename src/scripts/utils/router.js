@@ -75,6 +75,7 @@ class Router {
     try {
       if (!isAuthenticated && url === '/') {
         window.location.hash = '#/login';
+        await this.handleRoute();
         return;
       }
       
