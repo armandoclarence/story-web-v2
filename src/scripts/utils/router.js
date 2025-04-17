@@ -73,7 +73,7 @@ class Router {
     const isAuthenticated = !!getAccessToken();
     
     try {
-      if (!isAuthenticated && url !== '/login') {
+      if (!isAuthenticated && url === '/') {
         window.location.hash = '#/login';
         return;
       }
