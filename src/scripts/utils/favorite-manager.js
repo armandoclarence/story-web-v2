@@ -110,6 +110,7 @@ export default class FavoriteManager {
             await this.removeFavorite(storyId);
           } else {
             const story = await this.#getStoryById(storyId);
+            console.log(story);
             if (story) {
               await this.addFavorite(story);
             }

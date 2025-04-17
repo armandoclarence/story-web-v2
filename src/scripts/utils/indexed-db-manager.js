@@ -19,9 +19,8 @@ export default class IndexedDBManager {
   }
 
   static async addToFavorites(story) {
-    const db = await this.init();
     return new Promise((resolve, reject) => {
-      const transaction = db.transaction([DB_CONFIG.stores.favorites], 'readwrite');
+      const transaction = this.#db.transaction([DB_CONFIG.stores.favorites], 'readwrite');
       const store = transaction.objectStore(DB_CONFIG.stores.favorites);
 
       const favorite = {
@@ -42,9 +41,8 @@ export default class IndexedDBManager {
   }
 
   static async removeFromFavorites(storyId) {
-    const db = await this.init();
     return new Promise((resolve, reject) => {
-      const transaction = db.transaction([DB_CONFIG.stores.favorites], 'readwrite');
+      const transaction = this.#db.transaction([DB_CONFIG.stores.favorites], 'readwrite');
       const store = transaction.objectStore(DB_CONFIG.stores.favorites);
 
       const request = store.delete(storyId);
@@ -58,9 +56,8 @@ export default class IndexedDBManager {
   }
 
   static async getFavorites() {
-    const db = await this.init();
     return new Promise((resolve, reject) => {
-      const transaction = db.transaction([DB_CONFIG.stores.favorites], 'readonly');
+      const transaction = this.#db.transaction([DB_CONFIG.stores.favorites], 'readonly');
       const store = transaction.objectStore(DB_CONFIG.stores.favorites);
 
       const request = store.getAll();
@@ -74,9 +71,8 @@ export default class IndexedDBManager {
   }
 
   static async isFavorite(storyId) {
-    const db = await this.init();
     return new Promise((resolve, reject) => {
-      const transaction = db.transaction([DB_CONFIG.stores.favorites], 'readonly');
+      const transaction = this.#db.transaction([DB_CONFIG.stores.favorites], 'readonly');
       const store = transaction.objectStore(DB_CONFIG.stores.favorites);
 
       const request = store.get(storyId);
@@ -92,9 +88,8 @@ export default class IndexedDBManager {
   }
 
   static async clearOldCache() {
-    const db = await this.init();
     return new Promise((resolve, reject) => {
-      const transaction = db.transaction([DB_CONFIG.stores.favorites], 'readwrite');
+      const transaction = this.#db.transaction([DB_CONFIG.stores.favorites], 'readwrite');
       const store = transaction.objectStore(DB_CONFIG.stores.favorites);
 
       // Keep favorites for 30 days
@@ -131,11 +126,10 @@ export default class IndexedDBManager {
   }
 
   static async cacheAPIResponse(url, data, type = 'story') {
-    const db = await this.init();
     
     try {
       // Store in IndexedDB first (always available)
-      const transaction = db.transaction([DB_CONFIG.stores.apiCache], 'readwrite');
+      const transaction = this.#db.transaction([DB_CONFIG.stores.apiCache], 'readwrite');
       const store = transaction.objectStore(DB_CONFIG.stores.apiCache);
 
       const entry = {
@@ -194,9 +188,8 @@ export default class IndexedDBManager {
       }
 
       // Fallback to IndexedDB
-      const db = await this.init();
       const data = await new Promise((resolve, reject) => {
-        const transaction = db.transaction([DB_CONFIG.stores.apiCache], 'readonly');
+        const transaction = this.#db.transaction([DB_CONFIG.stores.apiCache], 'readonly');
         const store = transaction.objectStore(DB_CONFIG.stores.apiCache);
       const request = store.get(url);
 
@@ -218,10 +211,9 @@ export default class IndexedDBManager {
 
   static async clearAPICache(maxAge = 24 * 60 * 60 * 1000) { // 24 hours by default
     try {
-      const db = await this.init();
       
       // Clear old entries from IndexedDB
-      const transaction = db.transaction([DB_CONFIG.stores.apiCache], 'readwrite');
+      const transaction = this.#db.transaction([DB_CONFIG.stores.apiCache], 'readwrite');
       const store = transaction.objectStore(DB_CONFIG.stores.apiCache);
       const oldestAllowed = Date.now() - maxAge;
 
@@ -287,11 +279,10 @@ export default class IndexedDBManager {
   // Add this method to your IndexedDBManager class
   static async getAllFavorites() {
     try {
-      const db = await this.init();
       
       // Get all favorites from IndexedDB
       const favorites = await new Promise((resolve, reject) => {
-        const transaction = db.transaction([DB_CONFIG.stores.favorites], 'readonly');
+        const transaction = this.#db.transaction([DB_CONFIG.stores.favorites], 'readonly');
         const store = transaction.objectStore(DB_CONFIG.stores.favorites);
         const request = store.getAll();
 
@@ -347,9 +338,8 @@ export default class IndexedDBManager {
   }
 
   static async getFavorite(storyId) {
-    const db = await this.init();
     return new Promise((resolve, reject) => {
-      const transaction = db.transaction([DB_CONFIG.stores.favorites], 'readonly');
+      const transaction = this.#db.transaction([DB_CONFIG.stores.favorites], 'readonly');
       const store = transaction.objectStore(DB_CONFIG.stores.favorites);
       
       const request = store.get(storyId);

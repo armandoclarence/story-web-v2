@@ -68,7 +68,7 @@ export function openDB() {
     request.onupgradeneeded = (event) => {
       const db = event.target.result;
       if (!db.objectStoreNames.contains(DB_CONFIG.stores.favorites)) {
-        db.createObjectStore(DB_CONFIG.stores.favorites, { keyPath: 'id' });
+        db.createObjectStore(DB_CONFIG.stores.favorites, { keyPath: 'storyId' });
       }
     };
 

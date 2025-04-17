@@ -24,11 +24,11 @@ var t=a=>{throw TypeError(a)};var f=(a,e,s)=>e.has(a)||t("Cannot "+s);var o=(a,e
           <i class="fas fa-pen"></i> Create Story
         </a>
       `:c?e.innerHTML=`
-        <a href="#/new-guest" class="draft-link">
+        <a href="#/new" class="draft-link">
           <i class="fas fa-pen"></i> Continue Draft
         </a>
       `:e.innerHTML=`
-        <a href="#/new-guest" class="new-story-link">
+        <a href="#/new" class="new-story-link">
           <i class="fas fa-plus"></i> Create Story
         </a>
       `};export{d as default};

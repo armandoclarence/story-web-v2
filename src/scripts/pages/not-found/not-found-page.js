@@ -43,13 +43,13 @@ export default class NotFoundPage {
       `;
     } else if (hasDraft) {
       container.innerHTML = `
-        <a href="#/new-guest" class="draft-link">
+        <a href="#/new" class="draft-link">
           <i class="fas fa-pen"></i> Continue Draft
         </a>
       `;
     } else {
       container.innerHTML = `
-        <a href="#/new-guest" class="new-story-link">
+        <a href="#/new" class="new-story-link">
           <i class="fas fa-plus"></i> Create Story
         </a>
       `;

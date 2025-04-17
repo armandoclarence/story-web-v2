@@ -70,8 +70,20 @@ class Router {
   async handleRoute() {
     const url = getActiveRoute();
     const urlSegments = parseActivePathname();
+    const isAuthenticated = !!getAccessToken();
     
     try {
+      if (!isAuthenticated && url !== '/login') {
+        window.location.hash = '#/login';
+        return;
+      }
+      
+      // If already authenticated and on login page, redirect to home
+      if (isAuthenticated && url === '/login') {
+        window.location.hash = '#/';
+        return;
+      }
+      
       const route = routes[url];
       if (!route) {
         window.location.hash = '#/404';
@@ -88,7 +100,6 @@ class Router {
       this.setupMobileNavigation();
 
       // Check authentication before offline check
-      const isAuthenticated = !!getAccessToken();
       if (page.requiresAuth && !isAuthenticated) {
         window.location.hash = '#/login';
         return;
@@ -96,6 +107,11 @@ class Router {
 
       if (page.requiresUnauth && isAuthenticated) {
         window.location.hash = '#/';
+        return;
+      }
+
+      if (!isAuthenticated && window.location.hash == '#/') {
+        window.location.hash = '#/login';
         return;
       }
 
