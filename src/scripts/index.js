@@ -8,6 +8,14 @@ import Navigation from './utils/navigation';
 import IndexedDBManager from './utils/indexed-db-manager';
 import Router from "./utils/router";
 
+window.addEventListener('load', () => {
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`)
+      .then(reg => console.log('SW registered:', reg.scope))
+      .catch(err => console.error('SW registration failed:', err));
+  }
+});
+
 document.addEventListener('DOMContentLoaded', async () => {
   const app = new App({
     content: document.getElementById('main-content'),

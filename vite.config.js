@@ -9,7 +9,7 @@ export default defineConfig(({ mode }) => {
 
   return {
     base,
-    root: './', // Set root to current directory
+    root: '.', // Set root to current directory
     build: {
       outDir: 'docs',
       emptyOutDir: true,
@@ -48,11 +48,14 @@ export default defineConfig(({ mode }) => {
     plugins: [
       VitePWA({
         strategies: 'injectManifest',  // Enable injectManifest strategy
-        srcDir: './',
+        injectRegister: 'auto', // Disable auto registration, you will handle registration manually
         injectManifest: {
-          swSrc: resolve(__dirname, 'sw.js'), // Point to your custom sw.js file
+          swSrc: resolve(__dirname, "sw.js")
         },
-        injectRegister: false, // Disable auto registration, you will handle registration manually
+        devOptions: {
+          enabled: true,          // ← enables SW + manifest in dev
+          navigateFallback: '/', // ← optional
+        },
         manifest: {
           name: 'Story Web',
           short_name: 'StoryWeb',
