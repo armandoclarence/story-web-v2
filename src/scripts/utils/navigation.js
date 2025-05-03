@@ -31,7 +31,6 @@ export default class Navigation {
     // Drawer button click
     this.#drawerButton?.addEventListener('click', (event) => {
       event.stopPropagation();
-      console.log(event);
       this.toggleDrawer();
     });
 

@@ -17,6 +17,7 @@ export default defineConfig(({ mode }) => {
       rollupOptions: {
         input: {
           main: resolve(__dirname, 'index.html'),
+          filename: 'index.html'
         },
         output: {
           assetFileNames: (assetInfo) => {
@@ -47,14 +48,18 @@ export default defineConfig(({ mode }) => {
     },
     plugins: [
       VitePWA({
-        strategies: 'injectManifest',  // Enable injectManifest strategy
-        injectRegister: 'auto', // Disable auto registration, you will handle registration manually
+        strategies: 'injectManifest',
+        injectRegister: false, // disable auto register
+        registerType: 'autoUpdate',
+        filename: 'sw.js',
+        includeAssets: ['favicon.ico', 'robots.txt'],
         injectManifest: {
-          swSrc: resolve(__dirname, "sw.js")
+          globPatterns: [
+            '**/*.{html,js,css,png,jpg,json,webmanifest}',
+          ],
         },
         devOptions: {
-          enabled: true,          // ← enables SW + manifest in dev
-          navigateFallback: '/', // ← optional
+          enabled: true
         },
         manifest: {
           name: 'Story Web',

@@ -270,10 +270,6 @@ class Router {
       }
     });
   }
-
-  handleLogout() {
-    // Implementasi handleLogout
-  }
 }
 
 // Add styles

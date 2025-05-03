@@ -93,6 +93,7 @@ export default class NewPage {
   }
 
   async initialMap() {
+    if(!document.querySelector("#map")) return;
     this.#map = await Map.build('#map', {
       zoom: 15,
       locate: true,

@@ -219,6 +219,7 @@ export default class NotificationManager {
         userVisibleOnly: true,
         applicationServerKey: convertBase64ToUint8Array(CONFIG.VAPID_PUBLIC_KEY)
       });
+      console.log(pushSubscription);
 
       const data = pushSubscription.toJSON();
       console.log('Push subscription created:', data);
@@ -247,29 +248,59 @@ export default class NotificationManager {
 
   static async unsubscribePushMessage(subscribeButton) {
     try {
-      // First check localStorage
-      const storedSubscription = localStorage.getItem('pushSubscription');
-      if (storedSubscription) {
-        const parsedSubscription = JSON.parse(storedSubscription);
-        
-        // Unsubscribe from server using stored endpoint
-        await this.#apiModel.unsubscribePushNotification({
-          endpoint: parsedSubscription.endpoint
-        });
-      }
-      
-      // Then clean up local subscription
       const serviceWorkerRegistration = await navigator.serviceWorker?.ready;
       const subscription = await serviceWorkerRegistration?.pushManager.getSubscription();
+  
       if (subscription) {
-        await subscription.unsubscribe();
+        console.log('Existing subscription found:', subscription);
+  
+        // Unsubscribe from server first
+        const data = subscription.toJSON();
+        await this.#apiModel.unsubscribePushNotification({
+          endpoint: data.endpoint,
+        });
+  
+        // Unsubscribe from push manager
+        const success = await subscription.unsubscribe();
+        console.log('Unsubscribed from push manager:', success);
+  
+        localStorage.removeItem('pushSubscription');
+        this.updateSubscribeButtonState(subscribeButton, false);
+        console.log('Successfully unsubscribed from push messages');
+      } else {
+        console.log('No active subscription found to unsubscribe');
       }
-      
-      localStorage.removeItem('pushSubscription');
-      this.updateSubscribeButtonState(subscribeButton, false);
     } catch (error) {
       console.error('Failed to unsubscribe:', error);
       throw error;
+    }
+  }
+  static async unsubscribePushMessage(subscribeButton) {
+    try {
+      const serviceWorkerRegistration = await navigator.serviceWorker?.ready;
+      const subscription = await serviceWorkerRegistration?.pushManager.getSubscription();
+  
+      if (subscription) {
+        console.log('Existing subscription found:', subscription);
+  
+        // Unsubscribe from server first
+        const data = subscription.toJSON();
+        await this.#apiModel.unsubscribePushNotification({
+          endpoint: data.endpoint,
+        });
+  
+        // Unsubscribe from push manager
+        const success = await subscription.unsubscribe();
+        console.log('Unsubscribed from push manager:', success);
+  
+        localStorage.removeItem('pushSubscription');
+        this.updateSubscribeButtonState(subscribeButton, false);
+        console.log('Successfully unsubscribed from push messages');
+      } else {
+        console.log('No active subscription found to unsubscribe');
+      }
+    } catch (error) {
+      console.error('Failed to unsubscribe:', error);
     }
   }
 
