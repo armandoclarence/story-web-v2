@@ -9,11 +9,20 @@ export default class Map {
   #map = null;
 
   static async getPlaceNameByCoordinate(latitude, longitude) {
+    if (
+      latitude == null || longitude == null ||
+      isNaN(latitude) || isNaN(longitude)
+    ) {
+      console.warn('getPlaceNameByCoordinate: Invalid coordinates.');
+      return 'Unknown location';
+    }
+  
     try {
       const url = new URL(`https://api.maptiler.com/geocoding/${longitude},${latitude}.json`);
       url.searchParams.set('key', CONFIG.MAP_SERVICE_API_KEY);
       url.searchParams.set('language', 'id');
       url.searchParams.set('limit', '1');
+  
       const response = await fetch(url);
       const json = await response.json();
       const place = json.features[0]?.place_name;
@@ -118,13 +127,27 @@ export default class Map {
   }
 
   addMarker(coordinates, markerOptions = {}, popupOptions = null) {
+    if (
+      !Array.isArray(coordinates) ||
+      coordinates.length !== 2 ||
+      coordinates[0] == null ||
+      coordinates[1] == null ||
+      isNaN(coordinates[0]) ||
+      isNaN(coordinates[1])
+    ) {
+      console.warn('addMarker: Invalid coordinates, skipping marker.');
+      return null;
+    }
+  
     if (typeof markerOptions !== 'object') {
       throw new Error('markerOptions must be an object');
     }
+  
     const newMarker = marker(coordinates, {
       icon: this.createIcon(),
       ...markerOptions,
     });
+  
     if (popupOptions) {
       if (typeof popupOptions !== 'object') {
         throw new Error('popupOptions must be an object');
@@ -132,9 +155,11 @@ export default class Map {
       if (!('content' in popupOptions)) {
         throw new Error('popupOptions must include `content` property.');
       }
+  
       const newPopup = popup(coordinates, popupOptions);
       newMarker.bindPopup(newPopup);
     }
+  
     newMarker.addTo(this.#map);
     return newMarker;
   }

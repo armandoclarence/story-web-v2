@@ -1,9 +1,3 @@
-/* Import other stylesheets */
-@import 'common.css';
-@import 'story-item.css';
-@import 'story-detail.css';
-@import 'new-form.css';
-
 /* Base Styles */
 * {
   margin: 0;

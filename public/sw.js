@@ -69,27 +69,37 @@ self.addEventListener('notificationclick', (event) => {
 
 // Install event for caching assets
 self.addEventListener('install', (event) => {
-  event.waitUntil(self.skipWaiting());
+  self.skipWaiting();
 });
 
 // Fetch event for offline support
 self.addEventListener('fetch', (event) => {
+  const url = new URL(event.request.url);
+
+  // 👇 Skip dev-specific files like Vite HMR client
+  if (url.pathname.startsWith('/@vite')) {
+    return;
+  }
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       if (cachedResponse) {
-        return cachedResponse;  // Return cached response for offline
+        return cachedResponse;
       }
-      return fetch(event.request);  // Fetch from network if available
-    }).catch(() => {
-      // Fallback to offline page if network is unreachable
-      return caches.match(`${BASE_URL}offline.html`);
+      return fetch(event.request).catch(() => {
+        return caches.match(`${BASE_URL}offline.html`).then((offlineResponse) => {
+          // Ensure a fallback response is always valid
+          return offlineResponse || new Response('You are offline', {
+            headers: { 'Content-Type': 'text/plain' }
+          });
+        });
+      });
     })
   );
 });
 
 // Activate event for cleaning up old caches
 self.addEventListener('activate', (event) => {
-  event.waitUntil(self.clients.claim());
+  self.clients.claim();
 });
 
 // Cache strategies for assets
@@ -121,8 +131,8 @@ registerRoute(
 );
 
 registerRoute(
-  ({ url }) => /\.(js|css|html)$/.test(url.pathname),
-  new StaleWhileRevalidate({
+  /\.(js|css)$/,
+  new CacheFirst({
     cacheName: 'static-resources',
     plugins: [new CacheableResponsePlugin({ statuses: [0, 200] })]
   })
@@ -186,7 +196,7 @@ registerRoute(
 // Cache pages with a NetworkFirst strategy
 registerRoute(
   ({ request }) => request.mode === 'navigate',
-  new NetworkFirst({
+  new CacheFirst({
     cacheName: 'pages',
     plugins: [
       new ExpirationPlugin({ maxEntries: 50 })

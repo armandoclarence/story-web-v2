@@ -3,11 +3,16 @@ import { VitePWA } from 'vite-plugin-pwa';
 import { resolve } from 'path';
 
 // https://vitejs.dev/config/
-export default defineConfig(({ mode }) => {
+export default defineConfig(async ({ mode }) => {
   const isProduction = mode === 'production';
   const base = isProduction ? '/story-web-v2/' : '/';
 
   return {
+    server: {
+      open: false, // Ensure the dev server opens automatically in the browser
+      cors: true, // Allow cross-origin requests if necessary
+      hmr: false
+    },
     base,
     root: '.', // Set root to current directory
     build: {
@@ -57,9 +62,6 @@ export default defineConfig(({ mode }) => {
           globPatterns: [
             '**/*.{html,js,css,png,jpg,json,webmanifest}',
           ],
-        },
-        devOptions: {
-          enabled: true
         },
         manifest: {
           name: 'Story Web',
