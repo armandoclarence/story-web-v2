@@ -5,7 +5,7 @@ export function getAccessToken() {
   try {
     const accessToken = localStorage.getItem(CONFIG.ACCESS_TOKEN_KEY);
 
-    if (accessToken === 'null' || accessToken === 'undefined') {
+    if (accessToken === null || accessToken === 'undefined') {
       return null;
     }
 

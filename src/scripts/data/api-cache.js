@@ -8,17 +8,6 @@ export const fetchWithCache = async (endpoint, options = {}) => {
   const url = `${BASE_URL}/${endpoint}`;
   const token = getAccessToken();
 
-  // If offline, try cache first
-  if (!navigator.onLine) {
-    console.log('Offline - checking cache for:', url);
-    const cachedData = await IndexedDBManager.getFromAPICache(url);
-    if (cachedData) {
-      console.log('Found cached data for:', url);
-      return { ok: true, ...cachedData, isFromCache: true };
-    }
-    return { ok: false, error: 'Offline and no cached data available' };
-  }
-
   try {
     // Try network request
     const response = await fetch(url, {
@@ -28,6 +17,7 @@ export const fetchWithCache = async (endpoint, options = {}) => {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...options.headers,
       },
+      cache: 'reload',
     });
 
     if (!response.ok) {
@@ -35,23 +25,68 @@ export const fetchWithCache = async (endpoint, options = {}) => {
     }
 
     const data = await response.json();
+    const cache = await caches.open('api-cache-v1');
+    await cache.delete(url);
+    const tryResponse = await fetch(url, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...options.headers,
+      },
+      cache: 'reload',
+    });
 
-    // Cache successful response
-    console.log('Caching successful response for:', url);
-    await IndexedDBManager.cacheAPIResponse(url, data);
-
-    return { ok: true, ...data };
-  } catch (error) {
-    console.error('Fetch error:', error);
-    
-    // On error, try cache
-    console.log('Trying cache after fetch error for:', url);
-    const cachedData = await IndexedDBManager.getFromAPICache(url);
-    if (cachedData) {
-      console.log('Found cached data after error for:', url);
-      return { ok: true, ...cachedData, isFromCache: true };
+    if (!tryResponse.ok) {
+      throw new Error('Network response was not ok');
     }
-    
-    return { ok: false, error: error.message };
+    const tryData = await tryResponse.json();
+    // Cache successful response
+
+    console.log('Caching successful response for:', url);
+    let source;
+    if(data.data) {
+      source = {
+        url,
+        ...data,
+        data: {
+          ...data.data,
+          listStory: tryData?.listStory?.map((story) => {
+            const cachedStory = localStorage.getItem('favorites');
+            const parseStory = JSON.parse(cachedStory);
+            const isFavorite = parseStory ? !!parseStory.find((item) => item.id === story.id) : false;
+            console.log(isFavorite);
+            return { ...story, isFavorite };
+          })
+        },
+        timestamp: Date.now(),
+        type: 'story',
+      }
+    } else {
+      source = {
+        url,
+        data: {
+          ...tryData,
+          listStory: tryData?.listStory?.map((story) =>({ ...story, isFavorite: false }))
+        },
+        timestamp: Date.now(),
+        type: 'story',
+      }
+    }
+    console.log(source);
+    await IndexedDBManager.cacheAPIResponse(url, source);
+
+    return { ok: true, ...source };
+  } catch (error) {
+    if (!navigator.onLine) {
+      console.log('Offline - using cache for:', url);
+      const cachedData = await IndexedDBManager.getFromAPICache(url);
+      if (cachedData) {
+        console.log('Found cached data after error for:', url);
+        return { ok: true, ...cachedData, isFromCache: true };
+      }
+    }
+    console.error('Fetch error:', error);
+    return { ok: false, data: {error: error.message} };
   }
 };

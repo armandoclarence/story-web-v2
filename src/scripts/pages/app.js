@@ -80,6 +80,7 @@ export default class App {
 
     setInterval(() => {
       IndexedDBManager.clearOldCache();
+      IndexedDBManager.clearAPICache();
     }, 60 * 60 * 1000);
   }
 }

@@ -2,6 +2,8 @@ import { getAccessToken } from '../utils/auth';
 import CONFIG from '../config';
 import { fetchWithCache } from './api-cache';
 import * as DB from './db';
+import IndexedDBManager from '../utils/indexed-db-manager';
+import { createFormData } from '../utils';
 
 const ENDPOINTS = {
   REGISTER: `${CONFIG.BASE_URL}/register`,
@@ -52,23 +54,33 @@ export const getStories = async ({ page = 1, size = 10 } = {}) => {
   return fetchWithCache(`stories?page=${page}&size=${size}`);
 };
 
-export const getStoryById = async (id) => {
-  return fetchWithCache(`stories/${id}`);
+export const getStoryById = async (db, storyId) => {
+  try {
+    console.log(storyId);
+    const accessToken = getAccessToken();
+    let response;
+    response = await DB.getStoryById(db, storyId);
+    if (!response) {
+      response = await fetch(ENDPOINTS.STORY_DETAIL(storyId), {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+    }
+    console.log(response);
+    return { ok: true, story: response};
+  } catch (error) {
+    return { ok: false, message: error.message };
+  }
 };
 
-export async function storeNewStory({
-  description,
-  photo,
-  lat,
-  lon,
-}) {
+export async function storeNewStory(data) {
   const accessToken = getAccessToken();
 
-  const formData = new FormData();
-  formData.set('description', description);
-  formData.set('photo', photo[0].blob);
-  formData.set('lat', lat);
-  formData.set('lon', lon);
+  const formData = createFormData({
+    description: data.description,
+    photo: data.photo,
+    lat: data?.lat,
+    lon: data?.lon,
+  })
 
   const fetchResponse = await fetch(ENDPOINTS.STORE_NEW_STORY, {
     method: 'POST',
@@ -82,19 +94,15 @@ export async function storeNewStory({
   };
 }
 
-export async function storeNewStoryGuest({
-  description,
-  photo,
-  lat,
-  lon,
-}) {
+export async function storeNewStoryGuest(data) {
   const accessToken = getAccessToken();
 
-  const formData = new FormData();
-  formData.set('description', description);
-  formData.set('photo', photo[0].blob);
-  formData.set('lat', lat);
-  formData.set('lon', lon);
+  const formData = createFormData({
+    description: data.description,
+    photo: data.photo,
+    lat: data?.lat,
+    lon: data?.lon,
+  })
 
   const fetchResponse = await fetch(ENDPOINTS.STORE_NEW_STORY_GUEST, {
     method: 'POST',
@@ -154,13 +162,14 @@ export async function unsubscribePushNotification({ endpoint }) {
   };
 }
 
-export async function saveStory(storyId) {
+export async function saveStory(db, storyId) {
   try {
-    const response = await getStoryById(storyId);
+    console.log(storyId);
+    const response = await getStoryById(db, storyId);
+    console.log(response);
+    await IndexedDBManager.addToFavorites(response.story);
 
-    await DB.addStory(response.story);
-
-    return response;
+    return { ok: true, response};
   } catch (error) {
     return { ok: false, message: error.message };
   }
@@ -168,22 +177,10 @@ export async function saveStory(storyId) {
 
 export async function removeStory(storyId) {
   try {
-    await DB.removeStoryById(storyId);
+    console.log(storyId);
+    await IndexedDBManager.removeFromFavorites(storyId);
     return { ok: true };
   } catch (error) {
     return { ok: false, message: error.message };
   }
-}
-
-export async function getSavedStories() {
-  try {
-    const stories = await DB.getAllStories();
-    return { ok: true, stories };
-  } catch (error) {
-    return { ok: false, message: error.message };
-  }
-}
-
-export async function isStorySaved(storyId) {
-  return await DB.isFavorite(storyId);
 }

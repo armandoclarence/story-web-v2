@@ -1,15 +1,23 @@
-import IndexedDBManager from "../utils/indexed-db-manager";
+import { storeNewStory, storeNewStoryGuest } from "./api";
 
 export const DB_CONFIG = {
   name: 'StoryAppDB',
-  version: 2,
+  version: 3,
   stores: {
     favorites: 'favorites',
-    apiCache: 'apiCache'
-  }
+    apiCache: 'apiCache',
+    postQueue: 'postQueue',
+  },
+  flag: 'db_reset_done'
 };
 
 export function initDB() {
+  if(!localStorage.getItem(DB_CONFIG.flag)) {
+    indexedDB.deleteDatabase(DB_CONFIG.name);
+    localStorage.setItem(DB_CONFIG.flag, 'true');
+
+    console.log('Database reset on first run');
+  }
   return new Promise((resolve, reject) => {
     console.log('Opening IndexedDB...');
     const request = indexedDB.open(DB_CONFIG.name, DB_CONFIG.version);
@@ -40,6 +48,13 @@ export function initDB() {
         apiStore.createIndex('type', 'type', { unique: false });
       }
 
+      if (!db.objectStoreNames.contains(DB_CONFIG.stores.postQueue)) {
+        console.log('Creating postQueue store...');
+        db.createObjectStore(DB_CONFIG.stores.postQueue, {
+          keyPath: 'id',
+          autoIncrement: true,
+        });
+      }
       console.log('Final stores:', Array.from(db.objectStoreNames));
     };
 
@@ -61,154 +76,114 @@ export function initDB() {
   });
 }
 
-export function openDB() {
+export async function getStoryById(db, storyId) {
+  const tx = db.transaction([DB_CONFIG.stores.favorites], 'readonly');
+  const store = tx.objectStore(DB_CONFIG.stores.favorites);
+  const request = store.get(storyId);
+
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_CONFIG.name, DB_CONFIG.version);
-
-    request.onupgradeneeded = (event) => {
-      const db = event.target.result;
-      if (!db.objectStoreNames.contains(DB_CONFIG.stores.favorites)) {
-        db.createObjectStore(DB_CONFIG.stores.favorites, { keyPath: 'storyId' });
-      }
+    request.onsuccess = () => {
+      console.log(request);
+      resolve(request.result);
     };
+    request.onerror = (event) => {
+      reject(event.target.error);
+    };
+  });
+}
 
+export async function syncStoriesFromApiCache(db) {
+  const tx = db.transaction([DB_CONFIG.stores.apiCache], 'readonly');
+  const cacheStore = tx.objectStore(DB_CONFIG.stores.apiCache);
+
+  const cachedEntries = await new Promise((resolve, reject) => {
+    const request = cacheStore.getAll();
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = (event) => reject(event.target.error);
+  });
+
+  for (const entry of cachedEntries) {
+    try {
+      if (entry.url.includes('/v1/stories')) {
+        const json = typeof entry.data === 'string' ? JSON.parse(entry.data) : entry.data;
+        const stories = json.listStory;
+        await saveStoriesToStore(db, stories);
+      }
+    } catch (err) {
+      console.warn(`Failed to process apiCache entry ${entry.url}:`, err);
+    }
+  }
+
+  console.log('All data moved from cache to stories store');
+}
+
+export async function queuePost(db, postData) {
+  const tx = db.transaction([DB_CONFIG.stores.postQueue], 'readwrite');
+  const store = tx.objectStore(DB_CONFIG.stores.postQueue);
+  store.add(postData);
+  await tx.oncomplete;
+}
+
+export async function retryQueuedPosts(db) {
+  const tx = db.transaction([DB_CONFIG.stores.postQueue], 'readwrite');
+  const store = tx.objectStore(DB_CONFIG.stores.postQueue);
+
+  const posts = await new Promise((resolve, reject) => {
+    const request = store.getAll();
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error);
   });
-}
+  if(posts.length === 0) return;
 
-export async function addStory(story) {
-  return new Promise(async (resolve, reject) => {
-    const db = await openDB();
-    const transaction = db.transaction([DB_CONFIG.stores.favorites], 'readwrite');
-    const store = transaction.objectStore(DB_CONFIG.stores.favorites);
-    
-    // Store complete story data
-    const favoriteEntry = {
-      ...story,
-      updatedAt: new Date().toISOString(),
-      createdAt: new Date().toISOString()
-    };
-
-    const request = store.put(favoriteEntry);
-
-    request.onsuccess = async () => {
-      // Also cache in the service worker cache
-      try {
-        const cache = await caches.open('api-cache-v1');
-        const response = new Response(JSON.stringify({ story }), {
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
-        await cache.put(`https://story-api.dicoding.dev/v1/stories/${story.id}`, response);
-      } catch (error) {
-        console.warn('Failed to cache story:', error);
+  for (const post of posts) {
+    try {
+      let response;
+      if (post.type === 'new') {
+        response = await storeNewStory(post);
       }
-      resolve();
-    };
 
-    request.onerror = (event) => {
-      console.error('Error adding favorite:', event.target.error);
-      reject(event.target.error);
-    };
-  });
-}
-
-export async function removeStoryById(id) {
-  return new Promise(async (resolve, reject) => {
-    const db = await openDB();
-    const transaction = db.transaction([DB_CONFIG.stores.favorites], 'readwrite');
-    const store = transaction.objectStore(DB_CONFIG.stores.favorites);
-    
-    const request = store.get(id);
-    
-    request.onsuccess = async () => {
-      if (request.result) {
-        const deleteRequest = store.delete(request.result.id);
-        
-        deleteRequest.onsuccess = async () => {
-          try {
-            // Remove from Workbox cache
-            const cache = await caches.open('api-cache-v1');
-            await cache.delete(`/api/stories/${id}`);
-            
-            // Broadcast the change
-            IndexedDBManager.broadcastChange({
-              type: 'remove',
-              storyId: id
-            });
-            
-            resolve();
-          } catch (error) {
-            console.warn('Failed to remove from cache:', error);
-            resolve(); // Still resolve as IndexedDB operation succeeded
-          }
-        };
-
-        deleteRequest.onerror = (event) => {
-          console.error('Error deleting from IndexedDB:', event.target.error);
-          reject(event.target.error);
-        };
+      if (post.type === 'new-guest') {
+        response = await storeNewStoryGuest(post);
+      } 
+      console.log(response);
+      if (response.ok) {
+        await deleteQueuePost(db, post.id); // this still works because `tx` is open
       } else {
-        resolve();
+        console.error('Failed to post from queue:', await response.json());
       }
-    };
-    
-    request.onerror = (event) => {
-      console.error('Error accessing IndexedDB:', event.target.error);
-      reject(event.target.error);
-    };
-  });
-}
-
-export async function getAllStories() {
-  return new Promise(async (resolve, reject) => {
-    const db = await openDB();
-    const tx = db.transaction(DB_CONFIG.stores.favorites, 'readonly');
-    const store = tx.objectStore(DB_CONFIG.stores.favorites);
-    const stories = await store.getAll();
-    db.close();
-    stories.onsuccess = () => {
-      console.log('stories', stories.result);
-      resolve(stories.result);
+    } catch (error) {
+      console.error('Retry post error:', error);
     }
-
-    stories.onerror = (event) => {
-      console.error('Error getting all stories:', event.target.error);
-      reject(event.target.error);
-    }
-  });
-}
-
-export async function getStoryById(id) {
-  return new Promise(async (resolve, reject) => {
-    const db = await openDB();
-    const tx = db.transaction(DB_CONFIG.stores.favorites, 'readonly');
-    const store = tx.objectStore(DB_CONFIG.stores.favorites);
-    
-    const request = store.get(id);
-    
-    request.onsuccess = () => {
-      console.log('story', request.result);
-      resolve(request.result);
-    };
-    
-    request.onerror = (event) => {
-      console.error('Error getting story by id:', event.target.error);
-      reject(event.target.error);
-    };
-  });
-}
-
-export async function isFavorite(id) {
-  return (await getStoryById(id)) !== undefined;
-}
-
-export async function toggleFavorite(story) {
-  if (await isFavorite(story.id)) {
-    await removeStoryById(story.id);
-  } else {
-    await addStory(story);
   }
+
+  await new Promise((resolve, reject) => {
+    tx.oncomplete = () => resolve();
+    tx.onerror = (event) => reject(event.target.error);
+  });
+}
+
+async function deleteQueuePost(db, id) {
+  const tx = db.transaction([DB_CONFIG.stores.postQueue], 'readwrite');
+  const store = tx.objectStore(DB_CONFIG.stores.postQueue);
+
+  store.delete(id);
+
+  await new Promise((resolve, reject) => {
+    tx.oncomplete = () => resolve();
+    tx.onerror = (event) => reject(event.target.error);
+  });
+}
+
+async function saveStoriesToStore(db, stories = []) {
+  const tx = db.transaction([DB_CONFIG.stores.favorites], 'readwrite');
+  const store = tx.objectStore(DB_CONFIG.stores.favorites);
+
+  for (const story of stories) {
+    store.put({...story, storyId: story.id});
+  }
+
+  await new Promise((resolve, reject) => {
+    tx.oncomplete = () => resolve();
+    tx.onerror = (event) => reject(event.target.error);
+  });
 }

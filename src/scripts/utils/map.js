@@ -37,51 +37,75 @@ export default class Map {
     return 'geolocation' in navigator;
   }
 
+  static async checkGeolocationPermission() {
+    if(!navigator.permissions) return null;
+
+    const status = await navigator.permissions.query({
+      name: 'geolocation'
+    })
+    return status.state;
+  }
+
+  static async isPermissionsGeolocationGranted() {
+    if(!navigator.permissions) return null;
+
+    const status = await Map.checkGeolocationPermission();
+    return status === "granted";
+  }
+
   static getCurrentPosition(options = {}) {
     return new Promise((resolve, reject) => {
-      if (!Map.isGeolocationAvailable()) {
-        reject('Geolocation API unsupported');
-        return;
-      }
 
       navigator.geolocation.getCurrentPosition(resolve, reject, options);
     });
   }
 
+  static async tryGetLocation() {
+    const permission = await Map.checkGeolocationPermission();
+
+    console.log(permission);
+    if(permission === 'denied') {
+      alert("Location permission is denied. Please enable it in your browser settings");
+      return;
+    }
+
+    try {
+      const position = await Map.getCurrentPosition();
+      console.log(`Latitude: ${position.coords.latitude}\nLongitude: ${position.coords.longitude}`);
+      return {
+        lat: position.coords.latitude,
+        lng: position.coords.longitude,
+      }
+    } catch (error) {
+      console.error("Error getting location: ", error.message);
+    }
+  }
+
   /**
-   * Reference of using this static method:
+   * Reference of using Map static method:
    * https://stackoverflow.com/questions/43431550/how-can-i-invoke-asynchronous-code-within-a-constructor
    * */
-  static async build(selector, options = {}) {
+  static async build(selector, options = {}, detail = false) {
+    console.log(selector);
     if ('center' in options && options.center) {
       return new Map(selector, options);
     }
-
-    const jakartaCoordinate = [-6.2, 106.816666];
-
-    if ('locate' in options && options.locate) {
-      try {
-        const position = await Map.getCurrentPosition();
-        const coordinate = [position.coords.latitude, position.coords.longitude];
-
-        return new Map(selector, {
-          ...options,
-          center: coordinate,
-        });
-      } catch (error) {
-        console.error('build: error:', error);
-
-        return new Map(selector, {
-          ...options,
-          center: jakartaCoordinate,
-        });
+    
+    let newOptions = {
+      ...options
+    };
+    if(!detail) {
+      const position = await Map.tryGetLocation();
+      console.log(position);
+      if(!position) return;
+      const coordinate = [position.lat, position.lng];
+      newOptions = {
+        ...newOptions,
+        center: coordinate
       }
     }
 
-    return new Map(selector, {
-      ...options,
-      center: jakartaCoordinate,
-    });
+    return new Map(selector, newOptions);
   }
 
   constructor(selector, options = {}) {
@@ -101,6 +125,7 @@ export default class Map {
   }
 
   changeCamera(coordinate, zoomLevel = null) {
+    console.log(this.#map);
     if (!zoomLevel) {
       this.#map.setView(latLng(coordinate), this.#zoom);
       return;
@@ -109,10 +134,11 @@ export default class Map {
   }
 
   getCenter() {
-    const { lat, lng } = this.#map.getCenter();
+    const position = this.#map.getCenter();
+    console.log(position);
     return {
-      latitude: lat,
-      longitude: lng,
+      latitude: position?.lat,
+      longitude: position?.lng,
     };
   }
 

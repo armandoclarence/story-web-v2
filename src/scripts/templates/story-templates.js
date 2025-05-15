@@ -60,13 +60,7 @@ export const generateStoryItemTemplate = ({
           <span>Baca Selengkapnya</span>
           <i class="fas fa-arrow-right"></i>
         </a>
-        <button 
-          class="story-item__favorite ${isFavorited ? 'active' : ''}" 
-          data-story-id="${id}" 
-          aria-label="${isFavorited ? 'Remove from favorites' : 'Add to favorites'}"
-        >
-          <i class="${isFavorited ? 'fas' : 'far'} fa-heart"></i>
-        </button>
+        ${generateFavoriteTemplate(id, isFavorited)}
       </div>
     </div>
   </article>
@@ -152,7 +146,9 @@ export function generateStoryDetailTemplate(story) {
     <div class="story-detail__body__actions__container">
       <h2>Aksi</h2>
       <div class="story-detail__actions__buttons">
-        <div id="save-actions-container"></div>
+        <div id="save-actions-container">
+          ${generateFavoriteButtonTemplate(story.id, story.isFavorite)}
+        </div>
       </div>
     </div>
   `;
@@ -214,13 +210,34 @@ export function generateCarouselTemplate(images, description) {
   `;
 }
 
-export const generateFavoriteButtonTemplate = (isFavorited = false) => `
+export const generateFavoriteButtonTemplate = (storyId, isFavorited = false) => `
   <button 
+    data-story-id=${storyId}
+    data-favorited=${isFavorited}
     id="story-detail-favorite" 
     class="story-detail__favorite ${isFavorited ? 'active' : ''}"
     aria-label="${isFavorited ? 'Remove from favorites' : 'Add to favorites'}"
   >
-    <i class="${isFavorited ? 'fas' : 'far'} fa-heart"></i>
-    <span>${isFavorited ? 'Hapus dari Favorit' : 'Tambah ke Favorit'}</span>
+    ${generateFavoriteHeart(isFavorited)}
+    ${generateFavoriteText(isFavorited)}
   </button>
+`;
+
+export const generateFavoriteTemplate = (storyId, isFavorited = false) => `
+  <button 
+    data-story-id=${storyId}
+    data-favorited=${isFavorited}
+    class="story-item__favorite ${isFavorited ? 'active' : ''}"
+    aria-label="${isFavorited ? 'Remove from favorites' : 'Add to favorites'}"
+  >
+    ${generateFavoriteHeart(isFavorited)}
+  </button>
+`;
+
+export const generateFavoriteText = (isFavorited = false) => `
+  <span>${isFavorited ? 'Hapus dari Favorit' : 'Tambah ke Favorit'}</span>
+`;
+
+export const generateFavoriteHeart = (isFavorited = false) => `
+  <i class="${isFavorited ? 'fas' : 'far'} fa-heart"></i>
 `;

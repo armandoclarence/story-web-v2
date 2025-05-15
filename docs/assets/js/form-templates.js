@@ -1,8 +1,8 @@
-const e=a=>`
+const e=(t,a)=>`
   <section>
     <div class="new-story__header">
       <div class="container">
-        <h1 class="new-story__header__title">Buat Cerita Baru ${a?"(Guest)":""}</h1>
+        <h1 class="new-story__header__title">Buat Cerita Baru ${t?"(Guest)":""}</h1>
         <p class="new-story__header__description">
           Silakan lengkapi formulir di bawah untuk membuat cerita baru.<br>
           Pastikan cerita yang dibuat adalah valid.
@@ -65,8 +65,13 @@ const e=a=>`
         </div>
         <div class="form-control">
           <div class="new-form__location__title">Lokasi</div>
-
-          <div class="new-form__location__container">
+          ${a?"":`
+                <div class="new-form__location__container">
+                  <div id="status">Not Granted</div>
+                  <button class="btn btn-outline" id="map-req" type="button">Request Permission</button>
+                </div>
+              `}
+          <div class="new-form__location__container" data-map="${a?"true":"false"}">
             <div class="new-form__location__map__container">
               <div id="map" class="new-form__location__map"></div>
               <div id="map-loading-container"></div>
@@ -86,16 +91,16 @@ const e=a=>`
       </form>
     </div>
   </section>
-`,o=(a,t)=>`
-  <li class="new-form__photo__outputs-item" data-photo-id="${t}">
-    <img src="${a}" alt="Preview ${t}" loading="lazy">
+`,i=(t,a)=>`
+  <li class="new-form__photo__outputs-item" data-photo-id="${a}">
+    <img src="${t}" alt="Preview ${a}" loading="lazy">
     <button
       class="new-form__photo__outputs-item__delete-btn"
-      data-index="${t}"
+      data-index="${a}"
       type="button"
       aria-label="Remove photo"
     >
       <i class="fas fa-times"></i>
     </button>
   </li>
-`;export{o as a,e as g};
+`;export{i as a,e as g};

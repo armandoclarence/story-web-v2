@@ -1,3 +1,6 @@
+import { queuePost } from "../../../data/db"
+import IndexedDBManager from "../../../utils/indexed-db-manager";
+
 export default class LoginPresenter {
   #view;
   #model;
@@ -11,6 +14,10 @@ export default class LoginPresenter {
 
   async getLogin({ email, password }) {
     this.#view.showSubmitLoadingButton();
+    if(!navigator.onLine) {
+      this.#view.loginFailed('Anda hanya bisa login saat online.');
+      return;
+    }
     try {
       const response = await this.#model.getLogin({ email, password });
 

@@ -18,7 +18,7 @@ export default class NewPage {
   #map = null;
 
   async render() {
-    return generateNewStoryFormTemplate();
+    return generateNewStoryFormTemplate(false, await Map.isPermissionsGeolocationGranted());
   }
 
   async afterRender() {
@@ -27,6 +27,12 @@ export default class NewPage {
       model: StoryAPI,
     });
     this.#takenPhoto = [];
+
+    if(document.querySelector("#map-req")) {
+      document.querySelector("#map-req").addEventListener('click', async () => {
+        await Map.tryGetLocation();
+      })
+    }
 
     this.#presenter.showNewFormMap();
     this.#setupForm();
@@ -46,17 +52,19 @@ export default class NewPage {
         return;
       }
       
-      if(this.#form.elements.namedItem('latitude').value === '' || this.#form.elements.namedItem('longitude').value === '') {
-        alert('Lokasi tidak boleh kosong');
-        return;
+      let data = {
+        description: this.#form.elements.namedItem('description').value,
+        photo: this.#takenPhoto[0].blob,
+      };
+      
+      if (await Map.isPermissionsGeolocationGranted()) {
+        data = {
+          ...data,
+          lat: this.#form.elements.namedItem('latitude').value,
+          lon: this.#form.elements.namedItem('longitude').value,
+        }
       }
 
-      const data = {
-        description: this.#form.elements.namedItem('description').value,
-        photo: this.#takenPhoto,
-        lat: this.#form.elements.namedItem('latitude').value,
-        lon: this.#form.elements.namedItem('longitude').value,
-      };
       await this.#presenter.postNewStory(data);
     });
 
@@ -77,18 +85,17 @@ export default class NewPage {
     document
       .getElementById('open-photo-camera-button')
       .addEventListener('click', async (event) => {
-        cameraContainer.classList.toggle('open');
+        this.#setupCamera();
         this.#isCameraOpen = cameraContainer.classList.contains('open');
-
         if (this.#isCameraOpen) {
+          cameraContainer.classList.remove('open');
+          event.currentTarget.textContent = 'Buka Kamera';
+          this.#camera.stop();
+        } else {
+          cameraContainer.classList.add('open');
           event.currentTarget.textContent = 'Tutup Kamera';
-          this.#setupCamera();
           await this.#camera.launch();
-          return;
         }
-
-        event.currentTarget.textContent = 'Buka Kamera';
-        this.#camera.stop();
       });
   }
 
@@ -96,9 +103,11 @@ export default class NewPage {
     if(!document.querySelector("#map")) return;
     this.#map = await Map.build('#map', {
       zoom: 15,
-      locate: true,
     });
+    if(!this.#map) return;
     const centerCoordinate = this.#map.getCenter();
+    console.log(this.#map);
+    this.#map.changeCamera([centerCoordinate.latitude, centerCoordinate.longitude]);
     this.#updateLatLngInput(centerCoordinate.latitude, centerCoordinate.longitude);
     const draggableMarker = this.#map.addMarker(
       [centerCoordinate.latitude, centerCoordinate.longitude],

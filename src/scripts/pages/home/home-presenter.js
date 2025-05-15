@@ -1,4 +1,4 @@
-import FavoriteManager from '../../utils/favorite-manager';
+import IndexedDBManager from "../../utils/indexed-db-manager";
 
 export default class HomePresenter {
   #view;
@@ -15,14 +15,15 @@ export default class HomePresenter {
 
       const response = await this.#model.getStories({ page, size });
       
-      if (!response.ok) {
-        throw new Error(response.error || 'Failed to load stories');
+      console.log(response);
+      if (response?.data?.error || !response?.ok) {
+        throw new Error(response?.data?.error || 'Failed to load stories');
       }
 
       // Show offline indicator if data is from cache
       await this.#view.populateStoriesList(
         '',
-        response.listStory,
+        response.data.listStory,
         response.isFromCache
       );
 
@@ -30,23 +31,6 @@ export default class HomePresenter {
       this.#view.populateStoriesListError(error.message);
     } finally {
       this.#view.hideLoading();
-    }
-  }
-
-  async toggleFavorite(storyId) {
-    try {
-      const isFavorited = await FavoriteManager.isFavorite(storyId);
-      if (isFavorited) {
-        await FavoriteManager.removeFavorite(storyId);
-      } else {
-        const story = await this.#model.getStoryById(storyId);
-        if (story.ok) {
-          await FavoriteManager.addFavorite(story.story);
-        }
-      }
-    } catch (error) {
-      console.error('Error toggling favorite:', error);
-      throw error;
     }
   }
 }

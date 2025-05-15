@@ -1,6 +1,7 @@
 import { convertBase64ToUint8Array } from './index';
 import CONFIG from '../config';
 import { generateSubscribeButtonTemplate, generateUnsubscribeButtonTemplate } from '../templates/story-templates';
+import { generateNotificationTemplate } from '../templates';
 
 export default class NotificationManager {
   static #apiModel = null;
@@ -63,7 +64,7 @@ export default class NotificationManager {
     }
 
     try {
-      console.log('Registering service worker...');
+      console.log('checking service worker ready...');
       const registration = await navigator.serviceWorker?.ready;
       console.log('Service Worker ready:', registration);
       console.log('VAPID Key:', CONFIG.VAPID_PUBLIC_KEY);
@@ -125,7 +126,13 @@ export default class NotificationManager {
           unsubscribeButton.addEventListener('click', async () => {
             try {
               console.log('Unsubscribe clicked');
-              await this.unsubscribePushMessage(notificationContainer);
+              if (!navigator.onLine) {
+                localStorage.setItem('pendingUnsubscribe', 'true');
+                alert("You're offline. We'll unsubscribe you when you're back online.");
+              } else {
+                await this.unsubscribePushMessage(notificationContainer);
+                localStorage.removeItem('pendingUnsubscribe');
+              }
             } catch (error) {
               console.error('Error unsubscribing:', error);
               alert('Gagal berhenti berlangganan. Silakan coba lagi.');
@@ -141,7 +148,13 @@ export default class NotificationManager {
               console.log('Subscribe clicked');
               const isPermissionGranted = await this.requestPermission();
               if (isPermissionGranted) {
-                await this.subscribePushMessage(notificationContainer);
+                if (!navigator.onLine) {
+                  localStorage.setItem('pendingSubscribe', 'true');
+                  alert("You're offline. We'll subscribe you when you're back online.");
+                } else {
+                  await this.subscribePushMessage(notificationContainer);
+                  localStorage.removeItem('pendingSubscribe');
+                }
               } else {
                 alert('Mohon izinkan notifikasi untuk mendapatkan pemberitahuan.');
               }
@@ -203,27 +216,33 @@ export default class NotificationManager {
   static async subscribePushMessage(subscribeButton) {
     console.log('Subscribing to push messages');
     try {
+      subscribeButton.disabled = true;
       const serviceWorkerRegistration = await navigator.serviceWorker?.ready;
       
       // Check if there's an existing subscription first
       const existingSubscription = await serviceWorkerRegistration?.pushManager.getSubscription();
+      console.log(existingSubscription)
       if (existingSubscription) {
         // If subscription exists, just store it and return
         localStorage.setItem('pushSubscription', JSON.stringify(existingSubscription));
         this.updateSubscribeButtonState(subscribeButton, true);
+        this.showNotification('Already subscribed, You are already receiving notifications', 'success');
         return existingSubscription;
       }
-
+      
       console.log('Creating new push subscription...');
-      const pushSubscription = await serviceWorkerRegistration?.pushManager.subscribe({
+      console.log(serviceWorkerRegistration)
+      const convertedKey = convertBase64ToUint8Array(CONFIG.VAPID_PUBLIC_KEY);
+      console.log(convertedKey);
+      const pushSubscription = await serviceWorkerRegistration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: convertBase64ToUint8Array(CONFIG.VAPID_PUBLIC_KEY)
+        applicationServerKey: convertedKey
       });
       console.log(pushSubscription);
-
+      
       const data = pushSubscription.toJSON();
       console.log('Push subscription created:', data);
-
+      
       console.log('Sending subscription to server...');
       const response = await this.#apiModel.subscribePushNotification({
         endpoint: data.endpoint,
@@ -233,74 +252,64 @@ export default class NotificationManager {
         }
       });
       console.log('Server response:', response);
-
+      
       localStorage.setItem('pushSubscription', JSON.stringify(pushSubscription));
       this.updateSubscribeButtonState(subscribeButton, true);
       
+      this.showNotification('Push enabled!, You\'ve successfully subscribed to notifications', 'success');
       console.log('Successfully subscribed to push messages');
-      return pushSubscription;
+      localStorage.removeItem('pendingSubscribe');
+      localStorage.removeItem('pendingUnsubscribe');
     } catch (error) {
       console.error('Failed to subscribe:', error);
       localStorage.removeItem('pushSubscription');
+      localStorage.removeItem('pendingSubscribe');
+      localStorage.removeItem('pendingUnsubscribe');
+      this.showNotification('Failed to subscribe, Please try again or check your settings', 'error');
       throw error;
+    } finally {
+      subscribeButton.disabled = false;
     }
   }
 
   static async unsubscribePushMessage(subscribeButton) {
     try {
+      subscribeButton.disabled = true;
       const serviceWorkerRegistration = await navigator.serviceWorker?.ready;
       const subscription = await serviceWorkerRegistration?.pushManager.getSubscription();
   
       if (subscription) {
         console.log('Existing subscription found:', subscription);
-  
+        
         // Unsubscribe from server first
         const data = subscription.toJSON();
+        const success = await subscription.unsubscribe();
+        console.log('Unsubscribed from push manager:', success);
+        
         await this.#apiModel.unsubscribePushNotification({
           endpoint: data.endpoint,
         });
   
         // Unsubscribe from push manager
-        const success = await subscription.unsubscribe();
-        console.log('Unsubscribed from push manager:', success);
-  
         localStorage.removeItem('pushSubscription');
         this.updateSubscribeButtonState(subscribeButton, false);
         console.log('Successfully unsubscribed from push messages');
+        this.showNotification('Unsubscribed, You have successfully unsubscribed from notifications', 'success');
       } else {
         console.log('No active subscription found to unsubscribe');
+        this.updateSubscribeButtonState(subscribeButton, false);
+        this.showNotification('No subscription, You were not subscribed to notifications', 'success');
       }
+      localStorage.removeItem('pendingSubscribe');
+      localStorage.removeItem('pendingUnsubscribe');
     } catch (error) {
       console.error('Failed to unsubscribe:', error);
+      localStorage.removeItem('pendingSubscribe');
+      localStorage.removeItem('pendingUnsubscribe');
+      this.showNotification('Unsubscribe Failed, Could not unsubscribe. Try again later.', 'error');
       throw error;
-    }
-  }
-  static async unsubscribePushMessage(subscribeButton) {
-    try {
-      const serviceWorkerRegistration = await navigator.serviceWorker?.ready;
-      const subscription = await serviceWorkerRegistration?.pushManager.getSubscription();
-  
-      if (subscription) {
-        console.log('Existing subscription found:', subscription);
-  
-        // Unsubscribe from server first
-        const data = subscription.toJSON();
-        await this.#apiModel.unsubscribePushNotification({
-          endpoint: data.endpoint,
-        });
-  
-        // Unsubscribe from push manager
-        const success = await subscription.unsubscribe();
-        console.log('Unsubscribed from push manager:', success);
-  
-        localStorage.removeItem('pushSubscription');
-        this.updateSubscribeButtonState(subscribeButton, false);
-        console.log('Successfully unsubscribed from push messages');
-      } else {
-        console.log('No active subscription found to unsubscribe');
-      }
-    } catch (error) {
-      console.error('Failed to unsubscribe:', error);
+    } finally {
+      subscribeButton.disabled = false;
     }
   }
 
@@ -313,7 +322,13 @@ export default class NotificationManager {
       const unsubscribeButton = button.querySelector('#unsubscribe-button');
       if (unsubscribeButton) {
         unsubscribeButton.addEventListener('click', async () => {
-          await this.unsubscribePushMessage(button);
+          if(!navigator.onLine) {
+            localStorage.setItem('pendingUnsubscribe', 'true');
+            alert("You're offline. We'll unsubscribe you when you're back online.");
+          } else {
+            await this.unsubscribePushMessage(button);
+            localStorage.removeItem('pendingUnsubscribe');
+          }
         });
       }
     } else {
@@ -323,10 +338,50 @@ export default class NotificationManager {
         subscribeButton.addEventListener('click', async () => {
           const isPermissionGranted = await this.requestPermission();
           if (isPermissionGranted) {
-            await this.subscribePushMessage(button);
+            if(!navigator.onLine) {
+              localStorage.setItem('pendingSubscribe', 'true');
+              alert("You're offline. We'll subscribe you when you're back online.");
+            } else {
+              await this.subscribePushMessage(button);
+              localStorage.removeItem('pendingSubscribe');
+            }
           }
         });
       }
     }
+  }
+
+  static showNotification(message, type = 'success') {
+      // Remove any existing notifications
+    const existingNotification = document.querySelector('.notification');
+    if (existingNotification) {
+      existingNotification.remove();
+    }
+
+    // Create notification container if it doesn't exist
+    let notificationContainer = document.getElementById('notification-container');
+    if (!notificationContainer) {
+      notificationContainer = document.createElement('div');
+      notificationContainer.id = 'notification-container';
+      document.body.appendChild(notificationContainer);
+    }
+
+    // Add new notification
+    notificationContainer.innerHTML = generateNotificationTemplate(message, type);
+
+    // Add close button functionality
+    const closeButton = notificationContainer.querySelector('.notification__close');
+    if (closeButton) {
+      closeButton.addEventListener('click', () => {
+        notificationContainer.innerHTML = '';
+      });
+    }
+
+    // Auto-remove after 3 seconds
+    setTimeout(() => {
+      if (notificationContainer) {
+        notificationContainer.innerHTML = '';
+      }
+    }, 3000);
   }
 }

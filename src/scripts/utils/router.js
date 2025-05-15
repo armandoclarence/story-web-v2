@@ -3,7 +3,7 @@ import { getActiveRoute, parseActivePathname } from '../routes/url-parser';
 import { getAccessToken } from './auth';
 import IndexedDBManager from './indexed-db-manager';
 import { transitionHelper } from '../utils';
-
+import { retryQueuedPosts } from '../data/db';
 class Router {
   constructor() {
     this.lastAttemptedHash = null;
@@ -31,7 +31,8 @@ class Router {
       this.hashChangeCallbacks.forEach(callback => callback());
     });
 
-    window.addEventListener('online', () => {
+    window.addEventListener('online', async () => {
+      await retryQueuedPosts(await IndexedDBManager.init());
       document.body.classList.remove('offline-mode');
       if (this.lastAttemptedHash) {
         window.location.hash = this.lastAttemptedHash;
@@ -56,7 +57,6 @@ class Router {
     const url = getActiveRoute();
     const urlSegments = parseActivePathname();
     const isAuthenticated = !!getAccessToken();
-    
     try {
       if (!isAuthenticated && url === '/') {
         window.location.hash = '#/login';

@@ -1,4 +1,4 @@
-export const generateNewStoryFormTemplate = (guest) => `
+export const generateNewStoryFormTemplate = (guest, geoLocation) => `
   <section>
     <div class="new-story__header">
       <div class="container">
@@ -65,8 +65,17 @@ export const generateNewStoryFormTemplate = (guest) => `
         </div>
         <div class="form-control">
           <div class="new-form__location__title">Lokasi</div>
-
-          <div class="new-form__location__container">
+          ${
+            !geoLocation ? (
+              `
+                <div class="new-form__location__container">
+                  <div id="status">Not Granted</div>
+                  <button class="btn btn-outline" id="map-req" type="button">Request Permission</button>
+                </div>
+              `
+            ) : ''
+          }
+          <div class="new-form__location__container" data-map="${geoLocation ? 'true' : 'false'}">
             <div class="new-form__location__map__container">
               <div id="map" class="new-form__location__map"></div>
               <div id="map-loading-container"></div>

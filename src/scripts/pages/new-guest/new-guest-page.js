@@ -18,7 +18,7 @@ export default class NewPageGuest {
   #map = null;
 
   async render() {
-    return generateNewStoryFormTemplate(true);
+    return generateNewStoryFormTemplate(true, await Map.isPermissionsGeolocationGranted());
   }
 
   async afterRender() {
@@ -45,18 +45,19 @@ export default class NewPageGuest {
         alert('Dokumentasi tidak boleh kosong');
         return;
       }
-      
-      if(this.#form.elements.namedItem('latitude').value === '' || this.#form.elements.namedItem('longitude').value === '') {
-        alert('Lokasi tidak boleh kosong');
-        return;
-      }
 
-      const data = {
+      let data = {
         description: this.#form.elements.namedItem('description').value,
-        photo: this.#takenPhoto,
-        lat: this.#form.elements.namedItem('latitude').value,
-        lon: this.#form.elements.namedItem('longitude').value,
+        photo: this.#takenPhoto[0].blob,
       };
+      
+      if(await Map.isPermissionsGeolocationGranted()) {
+        data = {
+          ...data,
+          lat: this.#form.elements.namedItem('latitude').value,
+          lon: this.#form.elements.namedItem('longitude').value,
+        }
+      }
       await this.#presenter.postNewStoryGuest(data);
     });
 
@@ -77,27 +78,28 @@ export default class NewPageGuest {
     document
       .getElementById('open-photo-camera-button')
       .addEventListener('click', async (event) => {
-        cameraContainer.classList.toggle('open');
+        this.#setupCamera();
         this.#isCameraOpen = cameraContainer.classList.contains('open');
-
         if (this.#isCameraOpen) {
+          cameraContainer.classList.remove('open');
+          event.currentTarget.textContent = 'Buka Kamera';
+          this.#camera.stop();
+        } else {
+          cameraContainer.classList.add('open');
           event.currentTarget.textContent = 'Tutup Kamera';
-          this.#setupCamera();
           await this.#camera.launch();
-          return;
         }
-
-        event.currentTarget.textContent = 'Buka Kamera';
-        this.#camera.stop();
       });
   }
 
   async initialMap() {
+    if(!document.querySelector("#map")) return;
     this.#map = await Map.build('#map', {
       zoom: 15,
-      locate: true,
     });
+    if(!this.#map) return;
     const centerCoordinate = this.#map.getCenter();
+    this.#map.changeCamera([centerCoordinate.latitude, centerCoordinate.longitude]);
     this.#updateLatLngInput(centerCoordinate.latitude, centerCoordinate.longitude);
     const draggableMarker = this.#map.addMarker(
       [centerCoordinate.latitude, centerCoordinate.longitude],

@@ -43,32 +43,7 @@ export default class HomePage {
       size: this.#pageSize
     });
     this.#initializePagination();
-    this.#initializeFavorites();
   }
-
-  #initializeFavorites() {
-    const storiesList = document.getElementById('stories-list');
-    if (!storiesList) return;
-
-    storiesList.addEventListener('click', async (event) => {
-      const favoriteButton = event.target.closest('.story-item__favorite');
-      if (!favoriteButton) return;
-
-      const storyId = favoriteButton.dataset.storyId;
-      if (!storyId) return;
-
-      try {
-        if (favoriteButton.classList.contains('active')) {
-          await this.#presenter.toggleFavorite(storyId);
-          // Remove the story item from the UI with animation
-        }
-      } catch (error) {
-        console.error('Error toggling favorite:', error);
-        alert('Gagal menghapus cerita dari favorit.');
-      }
-    });
-  }
-
 
   #initializePagination() {
     const paginationContainer = document.getElementById('pagination-container');
@@ -129,10 +104,10 @@ export default class HomePage {
   
     const html = await Promise.all(stories.map(async (story) => {
       const storyMapped = await storyMapper(story);
-      const isFavorited = await FavoriteManager.isFavorite(story.id);
+      console.log(story);
       return generateStoryItemTemplate({
         ...storyMapped,
-        isFavorited,
+        isFavorited: story.isFavorite,
         isOffline,
       });
     })).then(templates => templates.join(''));

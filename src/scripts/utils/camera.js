@@ -55,7 +55,7 @@ export default class Camera {
     };
 
     this.#selectCameraElement.onchange = async () => {
-      await this.stop();
+      this.stop();
       await this.launch();
     };
   }
@@ -85,8 +85,15 @@ export default class Camera {
       }, '');
 
       this.#selectCameraElement.innerHTML = html;
+      return {
+        ok: true
+      };
     } catch (error) {
       console.error('#populateDeviceList: error:', error);
+      return {
+        ok: false,
+        message: error.message
+      };
     }
   }
 
@@ -104,18 +111,21 @@ export default class Camera {
         },
       });
 
-      await this.#populateDeviceList(stream);
+      const populateDevice = await this.#populateDeviceList(stream);
+
+      if(!populateDevice.ok) alert(populateDevice?.message);
 
       return stream;
     } catch (error) {
       console.error('#getStream: error:', error);
+      alert(error.message);
       return null;
     }
   }
 
   async launch() {
     this.#currentStream = await this.#getStream();
-
+    if(!this.#currentStream) this.#clearCanvas();
     Camera.addNewStream(this.#currentStream);
 
     this.#videoElement.srcObject = this.#currentStream;

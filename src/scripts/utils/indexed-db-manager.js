@@ -1,4 +1,4 @@
-import { DB_CONFIG, initDB } from '../data/db';
+import { DB_CONFIG, initDB, syncStoriesFromApiCache } from '../data/db';
 
 export default class IndexedDBManager {
   static #db = null;
@@ -19,65 +19,97 @@ export default class IndexedDBManager {
   }
 
   static async addToFavorites(story) {
-    return new Promise((resolve, reject) => {
-      const transaction = this.#db.transaction([DB_CONFIG.stores.favorites], 'readwrite');
-      const store = transaction.objectStore(DB_CONFIG.stores.favorites);
-
+    return new Promise(async (resolve, reject) => {
+      const transaction = this.#db.transaction([DB_CONFIG.stores.favorites, DB_CONFIG.stores.apiCache], 'readwrite');
+      const storeStories = transaction.objectStore(DB_CONFIG.stores.favorites);
+      const storeCache = transaction.objectStore(DB_CONFIG.stores.apiCache);
+      console.log(story);
       const favorite = {
+        ...story,
         storyId: story.id,
-        story: story,
+        isFavorite: true,
         timestamp: Date.now(),
         updatedAt: new Date().toISOString()
       };
 
-      const request = store.put(favorite);
+      const request = storeStories.put(favorite);
 
       request.onsuccess = () => {
         this.broadcastChange({ type: 'add', storyId: story.id });
-        resolve();
+        resolve(request.result);
       };
       request.onerror = () => reject(request.error);
+      
+      const cachedEntries = await new Promise((resolve, reject) => {
+        const request = storeCache.getAll();
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = (event) => reject(event.target.error);
+      });
+      
+      for (const entry of cachedEntries) {
+        try {
+          if (entry.url.includes('/v1/stories')) {
+            this.cacheAPIResponse(entry.url, entry, favorite.storyId);
+          }
+        } catch (err) {
+          console.warn(`Failed to process apiCache entry ${entry.url}:`, err);
+        }
+      }
     });
   }
-
+  
   static async removeFromFavorites(storyId) {
-    return new Promise((resolve, reject) => {
-      const transaction = this.#db.transaction([DB_CONFIG.stores.favorites], 'readwrite');
+    return new Promise(async (resolve, reject) => {
+      const transaction = this.#db.transaction([DB_CONFIG.stores.favorites, DB_CONFIG.stores.apiCache], 'readwrite');
       const store = transaction.objectStore(DB_CONFIG.stores.favorites);
+      const cacheStore = transaction.objectStore(DB_CONFIG.stores.apiCache);
 
-      const request = store.delete(storyId);
+      console.log(storyId);
+      const exist = await store.get(storyId);
 
-      request.onsuccess = () => {
-        this.broadcastChange({ type: 'remove', storyId });
-        resolve();
-      };
-      request.onerror = () => reject(request.error);
-    });
-  }
-
-  static async getFavorites() {
-    return new Promise((resolve, reject) => {
-      const transaction = this.#db.transaction([DB_CONFIG.stores.favorites], 'readonly');
-      const store = transaction.objectStore(DB_CONFIG.stores.favorites);
-
-      const request = store.getAll();
-
-      request.onsuccess = () => {
-        const favorites = request.result.map(item => item.story);
-        resolve(favorites);
-      };
-      request.onerror = () => reject(request.error);
+      exist.onsuccess = async () => {
+        const cachedEntries = await new Promise((resolve, reject) => {
+          const request = cacheStore.getAll();
+          request.onsuccess = () => resolve(request.result);
+          request.onerror = (event) => reject(event.target.error);
+        });
+        console.log(exist);
+        const result = exist.result;
+        const newStory = {
+          ...result,
+          isFavorite: false,
+        }
+        console.log(newStory);
+        const request = store.put(newStory);
+        request.onsuccess = () => {
+          this.broadcastChange({ type: 'remove', storyId });
+          resolve(request.result);
+        };
+        request.onerror = () => reject(request.error);
+        for (const entry of cachedEntries) {
+          try {
+            if (entry.url.includes('/v1/stories')) {
+              this.cacheAPIResponse(entry.url, entry, storyId);
+            }
+          } catch (err) {
+            console.warn(`Failed to process apiCache entry ${entry.url}:`, err);
+          }
+        }
+      }
     });
   }
 
   static async isFavorite(storyId) {
     return new Promise((resolve, reject) => {
+      console.log(storyId);
       const transaction = this.#db.transaction([DB_CONFIG.stores.favorites], 'readonly');
       const store = transaction.objectStore(DB_CONFIG.stores.favorites);
-
       const request = store.get(storyId);
 
-      request.onsuccess = () => resolve(!!request.result);
+      request.onsuccess = () => {
+        console.log(request.result);
+        resolve(request.result.isFavorite)
+      };
       request.onerror = () => reject(request.error);
     });
   }
@@ -125,22 +157,32 @@ export default class IndexedDBManager {
     return 'caches' in window && window.isSecureContext;
   }
 
-  static async cacheAPIResponse(url, data, type = 'story') {
+  static async cacheAPIResponse(url, source, storyId = '', type = 'story') {
     
     try {
       // Store in IndexedDB first (always available)
       const transaction = this.#db.transaction([DB_CONFIG.stores.apiCache], 'readwrite');
       const store = transaction.objectStore(DB_CONFIG.stores.apiCache);
 
+      if(storyId) {
+        source.data.listStory = source.data?.listStory.map((story) => storyId === story.id ? ({ ...story, isFavorite: !story.isFavorite }) : story);
+      }
+      
       const entry = {
         url,
-        data,
+        data: {
+          ...source.data,
+          listStory: source.data.listStory
+        },
         type,
         timestamp: Date.now()
       };
 
+      console.log(entry);
+      if(entry.data?.listStory?.length === 0) return;
+
       await new Promise((resolve, reject) => {
-      const request = store.put(entry);
+        const request = store.put(entry);
         request.onsuccess = () => resolve();
         request.onerror = () => reject(request.error);
       });
@@ -149,13 +191,15 @@ export default class IndexedDBManager {
       if (this.#isCacheSupported()) {
         try {
           const cache = await caches.open(this.#CACHE_NAME);
-          const response = new Response(JSON.stringify(data), {
+          const response = new Response(JSON.stringify(entry), {
             headers: {
               'Content-Type': 'application/json',
               'Cache-Control': 'max-age=86400'
             }
           });
+          console.log(response);
           await cache.put(url, response);
+          await syncStoriesFromApiCache(this.#db);
           console.log('Cached in both IndexedDB and Cache Storage:', url);
         } catch (cacheError) {
           console.warn('Cache Storage failed, using IndexedDB only:', cacheError);
@@ -191,9 +235,9 @@ export default class IndexedDBManager {
       const data = await new Promise((resolve, reject) => {
         const transaction = this.#db.transaction([DB_CONFIG.stores.apiCache], 'readonly');
         const store = transaction.objectStore(DB_CONFIG.stores.apiCache);
-      const request = store.get(url);
+        const request = store.get(url);
 
-        request.onsuccess = () => resolve(request.result?.data || null);
+        request.onsuccess = () => resolve(request.result || null);
         request.onerror = () => reject(request.error);
       });
 
@@ -209,9 +253,9 @@ export default class IndexedDBManager {
     }
   }
 
-  static async clearAPICache(maxAge = 24 * 60 * 60 * 1000) { // 24 hours by default
+  static async clearAPICache(hours = 24) { // 24 hours by default
     try {
-      
+      const maxAge = hours * 60 * 60 * 1000;
       // Clear old entries from IndexedDB
       const transaction = this.#db.transaction([DB_CONFIG.stores.apiCache], 'readwrite');
       const store = transaction.objectStore(DB_CONFIG.stores.apiCache);
@@ -220,18 +264,18 @@ export default class IndexedDBManager {
       await new Promise((resolve, reject) => {
         const request = store.openCursor();
 
-    request.onsuccess = (event) => {
-      const cursor = event.target.result;
-      if (cursor) {
-            if (cursor.value.timestamp < oldestAllowed) {
-              cursor.delete();
-            }
-        cursor.continue();
+        request.onsuccess = (event) => {
+        const cursor = event.target.result;
+        if (cursor) {
+          if (cursor.value.timestamp < oldestAllowed) {
+            cursor.delete();
+          }
+          cursor.continue();
           } else {
             resolve();
           }
         };
-        
+
         request.onerror = () => reject(request.error);
       });
 
@@ -253,29 +297,6 @@ export default class IndexedDBManager {
     }
   }
 
-  // Helper method to fetch with cache
-  static async fetchWithCache(url, options = {}) {
-    try {
-      // Try to get from cache first
-      const cachedData = await this.getFromAPICache(url);
-      if (cachedData) {
-        return cachedData;
-      }
-
-      // If not in cache, fetch from network
-      const response = await fetch(url, options);
-      const data = await response.json();
-
-      // Cache the response
-      await this.cacheAPIResponse(url, data);
-
-      return data;
-    } catch (error) {
-      console.error('Error fetching with cache:', error);
-      throw error;
-    }
-  }
-
   // Add this method to your IndexedDBManager class
   static async getAllFavorites() {
     try {
@@ -287,13 +308,8 @@ export default class IndexedDBManager {
         const request = store.getAll();
 
         request.onsuccess = () => {
-          const results = request.result.map(item => ({
-            id: item.storyId,
-            ...item.story,
-            isFavorite: true,
-            timestamp: item.timestamp,
-            updatedAt: item.updatedAt
-          }));
+          console.log(request.result);
+          const results = request.result.filter(item => item.isFavorite);
 
           // Sort by timestamp, newest first
           results.sort((a, b) => b.timestamp - a.timestamp);
@@ -309,54 +325,29 @@ export default class IndexedDBManager {
     }
   }
 
-  // Add a method to sync favorites with server data
-  static async syncFavorites(serverStories = []) {
-    try {
-      const favorites = await this.getAllFavorites();
-      
-      // Update existing favorites with server data
-      const updatePromises = serverStories.map(async (serverStory) => {
-        const existingFavorite = favorites.find(fav => fav.id === serverStory.id);
-        if (existingFavorite) {
-          return this.cacheAPIResponse(
-            `https://story-api.dicoding.dev/v1/stories/${serverStory.id}`,
-            {
-              ...serverStory,
-              isFavorite: true,
-              favoriteTimestamp: existingFavorite.favoriteTimestamp,
-              updatedAt: new Date().toISOString()
-            }
-          );
-        }
-      });
-
-      await Promise.all(updatePromises);
-      console.log('Favorites synced with server data');
-    } catch (error) {
-      console.error('Error syncing favorites:', error);
-    }
-  }
-
   static async getFavorite(storyId) {
     return new Promise((resolve, reject) => {
-      const transaction = this.#db.transaction([DB_CONFIG.stores.favorites], 'readonly');
+      console.log("DB instance:", this.#db);
+      console.log("Favorites store:", DB_CONFIG.stores.favorites);
+      const transaction = this.#db.transaction([DB_CONFIG.stores.favorites], 'readwrite');
       const store = transaction.objectStore(DB_CONFIG.stores.favorites);
       
+      console.log(storyId);
       const request = store.get(storyId);
-
+  
       request.onsuccess = () => {
-        if (request.result) {
+        const result = request.result;
+        if (result) {
           resolve({
-            id: request.result.storyId,
-            ...request.result.story,
-            isFavorite: true,
-            timestamp: request.result.timestamp,
-            updatedAt: request.result.updatedAt
+            ...result,
+            timestamp: result.timestamp,
+            updatedAt: result.updatedAt
           });
         } else {
-          resolve(null);
+          resolve(null); // Not found
         }
       };
+  
       request.onerror = () => reject(request.error);
     });
   }

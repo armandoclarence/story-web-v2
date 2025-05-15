@@ -236,6 +236,16 @@
 }
 
 /* Location Section */
+.new-form__location__container[data-map="false"] {
+  display: none;
+}
+
+.new-form__location__container[data-map="true"] {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
 .new-form__location__title {
   font-size: 1.25rem;
   font-weight: 600;
@@ -244,13 +254,14 @@
 
 .new-form__location__container {
   display: flex;
-  flex-direction: column;
+  align-items: center;
   gap: 1rem;
 }
 
 .new-form__location__map__container {
   position: relative;
   height: 400px;
+  width: 100%;
   border-radius: var(--radius-md);
   overflow: hidden;
   box-shadow: var(--shadow-sm);

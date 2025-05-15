@@ -24,14 +24,12 @@ export default class FavoritesPage {
     });
 
     await FavoriteManager.init(StoryAPI);
-
     // Add listener for favorites updates
     document.addEventListener('favorites-updated', async () => {
       await this.#presenter.loadFavorites();
     });
 
     await this.#presenter.loadFavorites();
-    this.#initializeFavorites();
   }
 
   async showFavorites(favorites, showPagination) {
@@ -52,11 +50,12 @@ export default class FavoritesPage {
       // Only show first 10 items
       const displayedFavorites = favorites.slice(0, this.#pageSize);
 
-      const templates = await Promise.all(displayedFavorites.map(async story => {
-        const storyMapped = await storyMapper(story);
+      const templates = await Promise.all(displayedFavorites.map(async favorite => {
+        console.log(favorite);
+        const storyMapped = await storyMapper(favorite);
         return generateStoryItemTemplate({
           ...storyMapped,
-          isFavorited: true,
+          isFavorited: favorite.isFavorite,
         });
       }));
 
@@ -166,52 +165,6 @@ export default class FavoritesPage {
         loadMoreButton.disabled = false;
         const buttonText = loadMoreButton.querySelector('span');
         buttonText.textContent = 'Muat Lebih Banyak';
-      }
-    });
-  }
-
-  #initializeFavorites() {
-    const storiesList = document.getElementById('favorites-list');
-    if (!storiesList) return;
-
-    storiesList.addEventListener('click', async (event) => {
-      const favoriteButton = event.target.closest('.story-item__favorite');
-      if (!favoriteButton) return;
-
-      const storyId = favoriteButton.dataset.storyId;
-      if (!storyId) return;
-
-      try {
-        if (favoriteButton.classList.contains('active')) {
-          const removed = await this.#presenter.toggleFavorite(storyId);
-          if (removed) {
-            const storyItem = favoriteButton.closest('.story-item');
-            if (storyItem) {
-              storyItem.classList.add('removing');
-              await new Promise(resolve => {
-                storyItem.addEventListener('transitionend', () => {
-                  storyItem.remove();
-                  resolve();
-                }, { once: true });
-              });
-
-              // Check if there are any stories left
-              const remainingStories = storiesList.querySelectorAll('.story-item');
-              if (remainingStories.length === 0) {
-                storiesList.innerHTML = '<p>Belum ada cerita favorit.</p>';
-                const paginationContainer = document.getElementById('pagination-container');
-                if (paginationContainer) {
-                  paginationContainer.innerHTML = '';
-                }
-              }
-              // Reload favorites to update the list and pagination
-              await this.#presenter.loadFavorites();
-            }
-          }
-        }
-      } catch (error) {
-        console.error('Error toggling favorite:', error);
-        alert('Gagal menghapus cerita dari favorit.');
       }
     });
   }

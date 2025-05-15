@@ -1,3 +1,6 @@
+import { queuePost } from "../../data/db";
+import IndexedDBManager from "../../utils/indexed-db-manager";
+
 export default class NewPresenter {
   #view;
   #model;
@@ -18,15 +21,31 @@ export default class NewPresenter {
     }
   }
 
-  async postNewStoryGuest({ description, photo, lat, lon }) {
+  async postNewStoryGuest(data) {
     this.#view.showSubmitLoadingButton();
+    if (!navigator.onLine) {
+      try {
+        await queuePost(await IndexedDBManager.init(), {
+          type: 'new-guest',
+          description: data?.description,
+          photo: data?.photo,
+          lat: data?.lat,
+          lon: data?.lon,
+        });
+        this.#view.storeSuccessfully(
+          'Anda sedang offline. Cerita akan dikirim saat online kembali.',
+          data
+        );
+      } catch (error) {
+        console.error('Failed to queue post offline:', error);
+        this.#view.storeFailed('Gagal menyimpan cerita secara offline.');
+      } finally {
+        this.#view.hideSubmitLoadingButton();
+      }
+      return;
+    }
+
     try {
-      const data = {
-        description: description,
-        photo: photo,
-        lat: lat,
-        lon: lon,
-      };
       const response = await this.#model.storeNewStoryGuest(data);
       if (!response.ok) {
         console.error('postNewStory: response:', response);
