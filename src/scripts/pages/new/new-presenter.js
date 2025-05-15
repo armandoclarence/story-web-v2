@@ -33,7 +33,7 @@ export default class NewPresenter {
           lon: data?.lon,
         });
         this.#view.storeSuccessfully(
-          'Anda sedang offline. Cerita akan dikirim saat online kembali.',
+          'Anda sedang offline. Cerita akan dikirim saat online dan login kembali.',
           data
         );
       } catch (error) {

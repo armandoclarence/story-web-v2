@@ -1,4 +1,5 @@
 import { storeNewStory, storeNewStoryGuest } from "./api";
+import { getAccessToken } from "../utils/auth";
 
 export const DB_CONFIG = {
   name: 'StoryAppDB',
@@ -121,6 +122,8 @@ export async function retryQueuedPosts(db) {
   const tx = db.transaction([DB_CONFIG.stores.postQueue], 'readwrite');
   const store = tx.objectStore(DB_CONFIG.stores.postQueue);
 
+  const accessToken = getAccessToken();
+
   const posts = await new Promise((resolve, reject) => {
     const request = store.getAll();
     request.onsuccess = () => resolve(request.result);
@@ -130,9 +133,15 @@ export async function retryQueuedPosts(db) {
 
   for (const post of posts) {
     try {
-      let response;
-      if (post.type === 'new') {
-        response = await storeNewStory(post);
+      let response = {};
+      if(accessToken) {
+        if (post.type === 'new') {
+          response = await storeNewStory(post);
+        }
+      }
+      
+      if(!accessToken) {
+        response.ok = false;
       }
 
       if (post.type === 'new-guest') {
@@ -141,8 +150,6 @@ export async function retryQueuedPosts(db) {
       console.log(response);
       if (response.ok) {
         await deleteQueuePost(db, post.id); // this still works because `tx` is open
-      } else {
-        console.error('Failed to post from queue:', await response.json());
       }
     } catch (error) {
       console.error('Retry post error:', error);

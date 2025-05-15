@@ -1,6 +1,3 @@
-import { queuePost } from "../../../data/db"
-import IndexedDBManager from "../../../utils/indexed-db-manager";
-
 export default class LoginPresenter {
   #view;
   #model;
