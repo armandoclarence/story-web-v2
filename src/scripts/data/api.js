@@ -95,8 +95,6 @@ export async function storeNewStory(data) {
 }
 
 export async function storeNewStoryGuest(data) {
-  const accessToken = getAccessToken();
-
   const formData = createFormData({
     description: data.description,
     photo: data.photo,
@@ -106,7 +104,6 @@ export async function storeNewStoryGuest(data) {
 
   const fetchResponse = await fetch(ENDPOINTS.STORE_NEW_STORY_GUEST, {
     method: 'POST',
-    headers: { Authorization: `Bearer ${accessToken}` },
     body: formData,
   });
   const json = await fetchResponse.json();

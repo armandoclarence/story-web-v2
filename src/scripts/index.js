@@ -12,7 +12,6 @@ import Camera from './utils/camera';
 import Navigation from './utils/navigation';
 import IndexedDBManager from './utils/indexed-db-manager';
 import Router from "./utils/router";
-import { DB_CONFIG } from './data/db';
 
 // Check if Service Worker is supported in the browser
 const swUrl = `${import.meta.env.BASE_URL}sw.js`;
