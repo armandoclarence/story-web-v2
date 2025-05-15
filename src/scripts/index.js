@@ -21,10 +21,11 @@ async function resetAndRegisterServiceWorker() {
 
   try {
     const registrations = await navigator.serviceWorker.getRegistrations();
-    await Promise.all(registrations.map(reg => reg.unregister()));
-    console.log('All service workers unregistered.');
+    await Promise.all(registrations.map(reg => reg.update()));
+    console.log('All service workers updated.');
 
     const registration = await navigator.serviceWorker.register(swUrl);
+    await registration.update();
     console.log('New service worker registered:', registration);
   } catch (err) {
     console.error('Service worker reset failed:', err);

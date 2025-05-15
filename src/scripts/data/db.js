@@ -2,22 +2,15 @@ import { storeNewStory, storeNewStoryGuest } from "./api";
 
 export const DB_CONFIG = {
   name: 'StoryAppDB',
-  version: 3,
+  version: 4,
   stores: {
     favorites: 'favorites',
     apiCache: 'apiCache',
     postQueue: 'postQueue',
-  },
-  flag: 'db_reset_done'
+  }
 };
 
 export function initDB() {
-  if(!localStorage.getItem(DB_CONFIG.flag)) {
-    indexedDB.deleteDatabase(DB_CONFIG.name);
-    localStorage.setItem(DB_CONFIG.flag, 'true');
-
-    console.log('Database reset on first run');
-  }
   return new Promise((resolve, reject) => {
     console.log('Opening IndexedDB...');
     const request = indexedDB.open(DB_CONFIG.name, DB_CONFIG.version);
