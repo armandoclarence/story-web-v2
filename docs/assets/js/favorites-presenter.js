@@ -1,0 +1,1 @@
+import{F as t}from"./index.js";class s{constructor({view:o,model:r}){this.view=o,this.model=r}async loadFavorites(){try{const o=await t.getAllFavorites();console.log(o);const r=o.length>10;await this.view.showFavorites(o,r)}catch(o){throw console.error("Error loading favorites:",o),o}}}export{s as default};

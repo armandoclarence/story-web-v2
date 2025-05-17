@@ -9,8 +9,6 @@ import {
   generateStoriesListErrorTemplate,
   generatePaginationTemplate,
 } from '../../templates';
-import { retryQueuedPosts } from '../../data/db';
-import IndexedDBManager from '../../utils/indexed-db-manager';
 
 export default class HomePage {
   #currentPage = 1;
@@ -38,8 +36,7 @@ export default class HomePage {
       model: StoryAPI,
     });
 
-    await retryQueuedPosts(await IndexedDBManager.init());
-
+    
     await FavoriteManager.init(StoryAPI);
 
     await this.#presenter.loadStories({

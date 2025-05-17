@@ -10,11 +10,11 @@ export default class LoginPresenter {
   }
 
   async getLogin({ email, password }) {
-    this.#view.showSubmitLoadingButton();
     if(!navigator.onLine) {
       this.#view.loginFailed('Anda hanya bisa login saat online.');
       return;
     }
+    this.#view.showSubmitLoadingButton();
     try {
       const response = await this.#model.getLogin({ email, password });
 

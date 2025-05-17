@@ -64,6 +64,7 @@ export default class LoginPage {
     alert(message);
     console.log(message);
     location.hash = '/';
+    window.broadcastAuth('login');
   }
   
   loginFailed(message) {
@@ -72,16 +73,20 @@ export default class LoginPage {
   }
 
   showSubmitLoadingButton() {
-    document.getElementById('submit-button-container').innerHTML = `
-      <button class="btn" type="submit" disabled>
-        <i class="fas fa-spinner loader-button"></i> Masuk
-      </button>
-    `;
+    if(document.getElementById('submit-button-container')) {
+      document.getElementById('submit-button-container').innerHTML = `
+        <button class="btn" type="submit" disabled>
+          <i class="fas fa-spinner loader-button"></i> Masuk
+        </button>
+      `;
+    }
   }
 
   hideSubmitLoadingButton() {
-    document.getElementById('submit-button-container').innerHTML = `
-      <button class="btn" type="submit">Masuk</button>
-    `;
+    if(document.getElementById('submit-button-container')) {
+      document.getElementById('submit-button-container').innerHTML = `
+        <button class="btn" type="submit">Masuk</button>
+      `;
+    }
   }
 }

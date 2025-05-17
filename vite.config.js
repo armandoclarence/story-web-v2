@@ -57,9 +57,13 @@ export default defineConfig(async ({ mode }) => {
     plugins: [
       VitePWA({
         strategies: 'injectManifest',
-        injectRegister: false, // disable auto register
+        injectRegister: 'auto',
         registerType: 'autoUpdate',
         filename: 'sw.js',
+        devOptions: {
+          enabled: true,
+          type: 'module'
+        },
         includeAssets: ['favicon.ico', 'robots.txt'],
         injectManifest: {
           globPatterns: [

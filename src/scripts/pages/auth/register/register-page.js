@@ -79,16 +79,20 @@ export default class RegisterPage {
   }
 
   showSubmitLoadingButton() {
-    document.getElementById('submit-button-container').innerHTML = `
+    if(document.getElementById('submit-button-container')) {
+      document.getElementById('submit-button-container').innerHTML = `
       <button class="btn" type="submit" disabled>
-        <i class="fas fa-spinner loader-button"></i> Daftar akun
-      </button>
-    `;
+          <i class="fas fa-spinner loader-button"></i> Daftar akun
+        </button>
+      `;
+    }
   }
 
   hideSubmitLoadingButton() {
-    document.getElementById('submit-button-container').innerHTML = `
-      <button class="btn" type="submit">Daftar akun</button>
-    `;
+    if(document.getElementById('submit-button-container')) {
+      document.getElementById('submit-button-container').innerHTML = `
+        <button class="btn" type="submit">Daftar akun</button>
+      `;
+    }
   }
 }

@@ -11,11 +11,11 @@ export default class RegisterPresenter {
   }
 
   async getRegistered({ name, email, password }) {
-    this.#view.showSubmitLoadingButton();
     if(!navigator.onLine) {
       this.#view.registeredFailed('Anda hanya bisa register saat online.');
       return;
     }
+    this.#view.showSubmitLoadingButton();
     try {
       const response = await this.#model.getRegistered({ name, email, password });
 

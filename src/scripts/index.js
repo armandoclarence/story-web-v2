@@ -12,39 +12,30 @@ import Camera from './utils/camera';
 import Navigation from './utils/navigation';
 import IndexedDBManager from './utils/indexed-db-manager';
 import Router from "./utils/router";
+import { setupAuthSync } from './utils/auth';
 
-// Check if Service Worker is supported in the browser
-const swUrl = `${import.meta.env.BASE_URL}sw.js`;
-
-async function resetAndRegisterServiceWorker() {
-  if(!('serviceWorker' in navigator)) return;
-
-  try {
-    const registrations = await navigator.serviceWorker.getRegistrations();
-    await Promise.all(registrations.map(reg => reg.update()));
-    console.log('All service workers updated.');
-
-    const registration = await navigator.serviceWorker.register(swUrl);
-    await registration.update();
-    console.log('New service worker registered:', registration);
-  } catch (err) {
-    console.error('Service worker reset failed:', err);
+setupAuthSync((type) => {
+  if (type == 'login') {
+    console.log('Login detected in another tab');
+    window.location.hash = '/';
+  } else if (type === 'logout') {
+    console.log('Logout detected in another tab');
+    window.location.hash = '/login';
   }
-}
-
-resetAndRegisterServiceWorker();
+})
 
 document.addEventListener('DOMContentLoaded', async () => {
+  
   const app = new App({
     content: document.getElementById('main-content'),
     skipLinkButton: document.getElementById('skip-link'),
   });
-  // Initialize IndexedDB
-  await IndexedDBManager.init();
-  await IndexedDBManager.clearAPICache();
-
+  
   // Initialize the app
   await app.initializeApp();
+  
+  // Initialize IndexedDB
+  await IndexedDBManager.init();
 
   // Initialize navigation
   Navigation.init();

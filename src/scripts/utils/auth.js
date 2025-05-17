@@ -62,4 +62,40 @@ export function checkAuthenticatedRoute(page) {
 
 export function getLogout() {
   removeAccessToken();
+  window.broadcastAuth('logout');
 }
+
+export function setupAuthSync(onAuthChange) {
+  const handleMessage = (type) => {
+    if (type === 'login' || type === 'logout') {
+      onAuthChange(type);
+    }
+  }
+
+  if ('BroadcastChannel' in window) {
+    const channel = new BroadcastChannel('auth');
+    channel.onmessage = (event) => handleMessage(event.data);
+
+    return (type) => channel.postMessage(type);
+  } else {
+    window.addEventListener('storage', (event) => {
+      if (event.key === 'auth-event') {
+        handleMessage(event.newValue);
+      }
+    });
+
+    return (type) => localStorage.setItem('auth-event', type);
+  }
+}
+
+const broadcastAuth = setupAuthSync ((type) => {
+  if (type == 'login') {
+    console.log('Login detected in another tab');
+    window.location.reload();
+  } else if (type === 'logout') {
+    console.log('Logout detected in another tab');
+    window.location.hash = '/login';
+  }
+});
+
+window.broadcastAuth = broadcastAuth;

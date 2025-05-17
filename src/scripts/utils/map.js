@@ -109,6 +109,8 @@ export default class Map {
   }
 
   constructor(selector, options = {}) {
+    if(!document.querySelector(selector)) return;
+
     this.#zoom = options.zoom ?? this.#zoom;
 
     const tileOsm = tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {

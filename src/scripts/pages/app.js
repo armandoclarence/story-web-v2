@@ -44,11 +44,9 @@ export default class App {
       if (navListMain) navListMain.innerHTML = '';
       if (navList) navList.innerHTML = generateUnauthenticatedNavigationListTemplate();
       return;
-    }
-
-    if (navListMain && navList) {
-      navListMain.innerHTML = generateMainNavigationListTemplate();
-      navList.innerHTML = generateAuthenticatedNavigationListTemplate();
+    } else {
+      if (navListMain) navListMain.innerHTML = generateMainNavigationListTemplate();
+      if (navList) navList.innerHTML = generateAuthenticatedNavigationListTemplate();
     }
 
     // Set up logout button
@@ -59,7 +57,6 @@ export default class App {
 
         if (confirm('Apakah Anda yakin ingin keluar?')) {
           getLogout();
-          location.hash = '/login';
         }
       });
     }
@@ -70,8 +67,8 @@ export default class App {
     }
   }
 
-  updateNavigation() {
-    this.#setupNavigationList();
+  async updateNavigation() {
+    await this.#setupNavigationList();
   }
 
   async initializeApp() {

@@ -209,24 +209,32 @@ export default class NewPageGuest {
   }
 
   showMapLoading() {
-    document.getElementById('map-loading-container').innerHTML = generateLoaderAbsoluteTemplate();
+    if(document.getElementById('map-loading-container')) {
+      document.getElementById('map-loading-container').innerHTML = generateLoaderAbsoluteTemplate();
+    }
   }
 
   hideMapLoading() {
-    document.getElementById('map-loading-container').innerHTML = '';
+    if(document.getElementById('map-loading-container')) {
+      document.getElementById('map-loading-container').innerHTML = '';
+    }
   }
 
   showSubmitLoadingButton() {
-    document.getElementById('submit-button-container').innerHTML = `
-      <button class="btn" type="submit" disabled>
-        <i class="fas fa-spinner loader-button"></i> Buat Cerita
-      </button>
-    `;
+    if(document.getElementById('submit-button-container')) {
+      document.getElementById('submit-button-container').innerHTML = `
+        <button class="btn" type="submit" disabled>
+          <i class="fas fa-spinner loader-button"></i> Buat Cerita
+        </button>
+      `;
+    }
   }
 
   hideSubmitLoadingButton() {
-    document.getElementById('submit-button-container').innerHTML = `
-      <button class="btn" type="submit">Buat Cerita</button>
-    `;
+    if(document.getElementById('submit-button-container')) {
+      document.getElementById('submit-button-container').innerHTML = `
+        <button class="btn" type="submit">Buat Cerita</button>
+      `;
+    }
   }
 }

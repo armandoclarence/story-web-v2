@@ -165,7 +165,6 @@ export default class NewPage {
       const imageUrl = URL.createObjectURL(picture.blob);
       return accumulator + generatePhotoOutputTemplate(imageUrl, picture.id);
     }, '');
-
     document.getElementById('photo-taken-list').innerHTML = html;
 
     document.querySelectorAll('button[data-index]').forEach((button) =>
@@ -216,24 +215,32 @@ export default class NewPage {
   }
 
   showMapLoading() {
-    document.getElementById('map-loading-container').innerHTML = generateLoaderAbsoluteTemplate();
+    if(document.getElementById('map-loading-container')) {
+      document.getElementById('map-loading-container').innerHTML = generateLoaderAbsoluteTemplate();
+    }
   }
 
   hideMapLoading() {
-    document.getElementById('map-loading-container').innerHTML = '';
+    if(document.getElementById('map-loading-container')) {
+      document.getElementById('map-loading-container').innerHTML = '';
+    }
   }
 
   showSubmitLoadingButton() {
-    document.getElementById('submit-button-container').innerHTML = `
-      <button class="btn" type="submit" disabled>
-        <i class="fas fa-spinner loader-button"></i> Buat Cerita
-      </button>
-    `;
+    if(document.getElementById('submit-button-container')) {
+      document.getElementById('submit-button-container').innerHTML = `
+        <button class="btn" type="submit" disabled>
+          <i class="fas fa-spinner loader-button"></i> Buat Cerita
+        </button>
+      `;
+    }
   }
 
   hideSubmitLoadingButton() {
-    document.getElementById('submit-button-container').innerHTML = `
-      <button class="btn" type="submit">Buat Cerita</button>
-    `;
+    if(document.getElementById('submit-button-container')) {
+      document.getElementById('submit-button-container').innerHTML = `
+        <button class="btn" type="submit">Buat Cerita</button>
+      `;
+    }
   }
 }

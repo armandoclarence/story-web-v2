@@ -20,12 +20,12 @@ export default class Camera {
   }
 
   static stopAllStreams() {
-    if (!Array.isArray(window.currentStreams)) {
+    if (!Array.isArray(window?.currentStreams)) {
       window.currentStreams = [];
       return;
     }
 
-    window.currentStreams.forEach((stream) => {
+    window?.currentStreams?.forEach((stream) => {
       if (stream.active) {
         stream.getTracks().forEach((track) => track.stop());
       }

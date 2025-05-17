@@ -10,21 +10,6 @@ export const fetchWithCache = async (endpoint, options = {}) => {
 
   try {
     // Try network request
-    const response = await fetch(url, {
-      ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        ...options.headers,
-      },
-      cache: 'reload',
-    });
-
-    if (!response.ok) {
-      throw new Error('Network response was not ok');
-    }
-
-    const data = await response.json();
     const cache = await caches.open('api-cache-v1');
     await cache.delete(url);
     const tryResponse = await fetch(url, {
@@ -45,12 +30,12 @@ export const fetchWithCache = async (endpoint, options = {}) => {
 
     console.log('Caching successful response for:', url);
     let source;
-    if(data.data) {
+    if(tryData.data) {
       source = {
         url,
-        ...data,
+        ...tryData,
         data: {
-          ...data.data,
+          ...tryData.data,
           listStory: tryData?.listStory?.map((story) => {
             const cachedStory = localStorage.getItem('favorites');
             const parseStory = JSON.parse(cachedStory);

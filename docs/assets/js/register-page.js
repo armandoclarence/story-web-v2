@@ -1,4 +1,4 @@
-var g=t=>{throw TypeError(t)};var c=(t,e,s)=>e.has(t)||g("Cannot "+s);var r=(t,e,s)=>(c(t,e,"read from private field"),s?s.call(t):e.get(t)),n=(t,e,s)=>e.has(t)?g("Cannot add the same private member more than once"):e instanceof WeakSet?e.add(t):e.set(t,s),u=(t,e,s,d)=>(c(t,e,"write to private field"),d?d.call(t,s):e.set(t,s),s),p=(t,e,s)=>(c(t,e,"access private method"),s);import{S as b}from"./index.js";var a,o;class h{constructor({view:e,model:s}){n(this,a);n(this,o);u(this,a,e),u(this,o,s)}async getRegistered({name:e,email:s,password:d}){if(r(this,a).showSubmitLoadingButton(),!navigator.onLine){r(this,a).registeredFailed("Anda hanya bisa register saat online.");return}try{const i=await r(this,o).getRegistered({name:e,email:s,password:d});if(!i.ok){console.error("getRegistered: response:",i),r(this,a).registeredFailed(i.message);return}r(this,a).registeredSuccessfully(i.message)}catch(i){console.error("getRegistered: error:",i),r(this,a).registeredFailed(i.message)}finally{r(this,a).hideSubmitLoadingButton()}}}a=new WeakMap,o=new WeakMap;var l,m,f;class _{constructor(){n(this,m);n(this,l,null)}async render(){return`
+var l=t=>{throw TypeError(t)};var r=(t,e,a)=>e.has(t)||l("Cannot "+a);var m=(t,e,a)=>(r(t,e,"read from private field"),a?a.call(t):e.get(t)),s=(t,e,a)=>e.has(t)?l("Cannot add the same private member more than once"):e instanceof WeakSet?e.add(t):e.set(t,a),d=(t,e,a,o)=>(r(t,e,"write to private field"),o?o.call(t,a):e.set(t,a),a),u=(t,e,a)=>(r(t,e,"access private method"),a);import p from"./register-presenter.js";import{S as f}from"./index.js";var n,i,c;class y{constructor(){s(this,i);s(this,n,null)}async render(){return`
       <section class="register-container">
         <div class="register-form-container">
           <h1 class="register__title">Daftar akun</h1>
@@ -34,10 +34,10 @@ var g=t=>{throw TypeError(t)};var c=(t,e,s)=>e.has(t)||g("Cannot "+s);var r=(t,e
           </form>
         </div>
       </section>
-    `}async afterRender(){u(this,l,new h({view:this,model:b})),p(this,m,f).call(this)}registeredSuccessfully(e){alert(e),console.log(e),location.hash="/login"}registeredFailed(e){alert(e),console.log(e)}showSubmitLoadingButton(){document.getElementById("submit-button-container").innerHTML=`
+    `}async afterRender(){d(this,n,new p({view:this,model:f})),u(this,i,c).call(this)}registeredSuccessfully(e){alert(e),console.log(e),location.hash="/login"}registeredFailed(e){alert(e),console.log(e)}showSubmitLoadingButton(){document.getElementById("submit-button-container")&&(document.getElementById("submit-button-container").innerHTML=`
       <button class="btn" type="submit" disabled>
-        <i class="fas fa-spinner loader-button"></i> Daftar akun
-      </button>
-    `}hideSubmitLoadingButton(){document.getElementById("submit-button-container").innerHTML=`
-      <button class="btn" type="submit">Daftar akun</button>
-    `}}l=new WeakMap,m=new WeakSet,f=function(){document.getElementById("register-form").addEventListener("submit",async e=>{e.preventDefault();const s={name:document.getElementById("name-input").value,email:document.getElementById("email-input").value,password:document.getElementById("password-input").value};await r(this,l).getRegistered(s)})};export{_ as default};
+          <i class="fas fa-spinner loader-button"></i> Daftar akun
+        </button>
+      `)}hideSubmitLoadingButton(){document.getElementById("submit-button-container")&&(document.getElementById("submit-button-container").innerHTML=`
+        <button class="btn" type="submit">Daftar akun</button>
+      `)}}n=new WeakMap,i=new WeakSet,c=function(){document.getElementById("register-form").addEventListener("submit",async e=>{e.preventDefault();const a={name:document.getElementById("name-input").value,email:document.getElementById("email-input").value,password:document.getElementById("password-input").value};await m(this,n).getRegistered(a)})};export{y as default};

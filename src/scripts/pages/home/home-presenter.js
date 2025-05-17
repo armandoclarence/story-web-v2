@@ -1,5 +1,3 @@
-import IndexedDBManager from "../../utils/indexed-db-manager";
-
 export default class HomePresenter {
   #view;
   #model;
@@ -19,8 +17,7 @@ export default class HomePresenter {
       if (response?.data?.error || !response?.ok) {
         throw new Error(response?.data?.error || 'Failed to load stories');
       }
-
-      // Show offline indicator if data is from cache
+      
       await this.#view.populateStoriesList(
         '',
         response.data.listStory,

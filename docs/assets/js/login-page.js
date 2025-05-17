@@ -1,4 +1,4 @@
-var g=o=>{throw TypeError(o)};var m=(o,t,n)=>t.has(o)||g("Cannot "+n);var i=(o,t,n)=>(m(o,t,"read from private field"),n?n.call(o):t.get(o)),a=(o,t,n)=>t.has(o)?g("Cannot add the same private member more than once"):t instanceof WeakSet?t.add(o):t.set(o,n),l=(o,t,n,e)=>(m(o,t,"write to private field"),e?e.call(o,n):t.set(o,n),n),p=(o,t,n)=>(m(o,t,"access private method"),n);import{A as b,S as f}from"./index.js";var s,r,u;class y{constructor({view:t,model:n,authModel:e}){a(this,s);a(this,r);a(this,u);l(this,s,t),l(this,r,n),l(this,u,e)}async getLogin({email:t,password:n}){if(i(this,s).showSubmitLoadingButton(),!navigator.onLine){i(this,s).loginFailed("Anda hanya bisa login saat online.");return}try{const e=await i(this,r).getLogin({email:t,password:n});if(!e.ok){console.error("getLogin: response:",e),i(this,s).loginFailed(e.message);return}i(this,u).putAccessToken(e.loginResult.token),i(this,s).loginSuccessfully(e.message)}catch(e){console.error("getLogin: error:",e),i(this,s).loginFailed(e.message)}finally{i(this,s).hideSubmitLoadingButton()}}}s=new WeakMap,r=new WeakMap,u=new WeakMap;var d,c,h;class L{constructor(){a(this,c);a(this,d,null)}async render(){return`
+var r=n=>{throw TypeError(n)};var a=(n,t,o)=>t.has(n)||r("Cannot "+o);var u=(n,t,o)=>(a(n,t,"read from private field"),o?o.call(n):t.get(n)),s=(n,t,o)=>t.has(n)?r("Cannot add the same private member more than once"):t instanceof WeakSet?t.add(n):t.set(n,o),d=(n,t,o,l)=>(a(n,t,"write to private field"),l?l.call(n,o):t.set(n,o),o),m=(n,t,o)=>(a(n,t,"access private method"),o);import b from"./login-presenter.js";import{A as p,S as f}from"./index.js";var e,i,c;class y{constructor(){s(this,i);s(this,e,null)}async render(){return`
       <section class="login-container">
         <article class="login-form-container">
           <h1 class="login__title">Masuk akun</h1>
@@ -27,10 +27,10 @@ var g=o=>{throw TypeError(o)};var m=(o,t,n)=>t.has(o)||g("Cannot "+n);var i=(o,t
           </form>
         </article>
       </section>
-    `}async afterRender(){l(this,d,new y({view:this,model:f,authModel:b})),p(this,c,h).call(this)}loginSuccessfully(t){alert(t),console.log(t),location.hash="/"}loginFailed(t){alert(t),console.log(t)}showSubmitLoadingButton(){document.getElementById("submit-button-container").innerHTML=`
-      <button class="btn" type="submit" disabled>
-        <i class="fas fa-spinner loader-button"></i> Masuk
-      </button>
-    `}hideSubmitLoadingButton(){document.getElementById("submit-button-container").innerHTML=`
-      <button class="btn" type="submit">Masuk</button>
-    `}}d=new WeakMap,c=new WeakSet,h=function(){document.getElementById("login-form").addEventListener("submit",async t=>{t.preventDefault();const n={email:document.getElementById("email-input").value,password:document.getElementById("password-input").value};await i(this,d).getLogin(n)})};export{L as default};
+    `}async afterRender(){d(this,e,new b({view:this,model:f,authModel:p})),m(this,i,c).call(this)}loginSuccessfully(t){alert(t),console.log(t),location.hash="/",window.broadcastAuth("login")}loginFailed(t){alert(t),console.log(t)}showSubmitLoadingButton(){document.getElementById("submit-button-container")&&(document.getElementById("submit-button-container").innerHTML=`
+        <button class="btn" type="submit" disabled>
+          <i class="fas fa-spinner loader-button"></i> Masuk
+        </button>
+      `)}hideSubmitLoadingButton(){document.getElementById("submit-button-container")&&(document.getElementById("submit-button-container").innerHTML=`
+        <button class="btn" type="submit">Masuk</button>
+      `)}}e=new WeakMap,i=new WeakSet,c=function(){document.getElementById("login-form").addEventListener("submit",async t=>{t.preventDefault();const o={email:document.getElementById("email-input").value,password:document.getElementById("password-input").value};await u(this,e).getLogin(o)})};export{y as default};

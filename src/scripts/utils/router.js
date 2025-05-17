@@ -1,12 +1,11 @@
-import routes from '../routes/routes';
-import { getActiveRoute, parseActivePathname } from '../routes/url-parser';
-import { getAccessToken } from './auth';
+import { pages, routes, preloadRoutes } from '../routes/routes';
+import { getActiveRoute } from '../routes/url-parser';
+import { getAccessToken, setupAuthSync } from './auth';
 import IndexedDBManager from './indexed-db-manager';
 import { transitionHelper } from '../utils';
 import { retryQueuedPosts } from '../data/db';
 class Router {
   constructor() {
-    this.lastAttemptedHash = null;
     this.hashChangeCallbacks = [];
     this.content = null;
     this.app = null;
@@ -21,29 +20,43 @@ class Router {
   }
 
   init() {
-    window.addEventListener('load', () => {
-      this.handleRoute();
+    window.addEventListener('load', async () => {
+      preloadRoutes(['/login', '/register', '/', '/new', '/new-guest', '/stories/:id', '/favorites', '/404']);
+      await this.handleRoute();
     });
 
     window.addEventListener('hashchange', async (event) => {
       event.preventDefault();
       await this.handleRoute();
+      await this.app.updateNavigation();
+      (
+        async() => {
+          await retryQueuedPosts(await IndexedDBManager.init());
+        }
+      )();
       this.hashChangeCallbacks.forEach(callback => callback());
     });
 
     window.addEventListener('online', async () => {
-      await retryQueuedPosts(await IndexedDBManager.init());
       document.body.classList.remove('offline-mode');
-      if (this.lastAttemptedHash) {
-        window.location.hash = this.lastAttemptedHash;
-        this.lastAttemptedHash = null;
-      }
+      (
+        async() => {
+          await retryQueuedPosts(await IndexedDBManager.init());
+        }
+      )();
     });
 
     window.addEventListener('offline', () => {
       document.body.classList.add('offline-mode');
-      this.lastAttemptedHash = window.location.hash;
     });
+
+    if(navigator.onLine) {
+      (
+        async() => {
+          await retryQueuedPosts(await IndexedDBManager.init());
+        }
+      )();
+    }
 
     this.setupNavigationHandlers();
   }
@@ -55,73 +68,39 @@ class Router {
 
   async handleRoute() {
     const url = getActiveRoute();
-    const urlSegments = parseActivePathname();
     const isAuthenticated = !!getAccessToken();
     try {
-      if (!isAuthenticated && url === '/') {
-        window.location.hash = '#/login';
-        await this.handleRoute();
-        return;
-      }
-
-      if (!navigator.onLine && isAuthenticated) {
-        if (['/login', '/register', '/new-guest'].includes(url)) {
-          window.location.hash = '#/';
-          return;
-        }
-      }
-
-      if (!navigator.onLine && !isAuthenticated) {
-        if (['/', '/favorites', '/new'].includes(url)) {
-          window.location.hash = '#/login';
-          return;
-        }
-      }
-
       const route = routes[url];
       if (!route) {
         window.location.hash = '#/404';
         return;
       }
 
-      const page = await route();
-      if (!page) {
-        window.location.hash = '#/404';
-        return;
-      }
-
-      // Add touch event handling for mobile
-      this.setupMobileNavigation();
-
-      // Check authentication before offline check
-      if (page.requiresAuth && !isAuthenticated) {
-        window.location.hash = '#/login';
-        return;
-      }
-
-      if (page.requiresUnauth && isAuthenticated) {
+      if (isAuthenticated && !route.protected) {
         window.location.hash = '#/';
         return;
       }
 
-      if (!isAuthenticated && window.location.hash == '#/') {
+      if (!isAuthenticated && route.protected) {
         window.location.hash = '#/login';
         return;
       }
 
+      const loadPage = (await (await pages[route.file])()).default;
+      if (!loadPage) {
+        window.location.hash = '#/404';
+        return;
+      }
+      const page = new loadPage();
+      // Add touch event handling for mobile
+      this.setupMobileNavigation();
+
       if (!navigator.onLine) {
-        // Only handle offline for authenticated pages that support it
-        if (isAuthenticated && page.offlineSupport) {
-          await this.handleOfflineRoute(urlSegments, page);
-          return;
-        }
+        await this.handleOfflineRoute(page);
+        return;
       }
 
       await this.renderPageWithTransition(page);
-      // Let the app handle navigation updates
-      if (this.app) {
-        this.app.updateNavigation();
-      }
 
     } catch (error) {
       console.error('Route handling error:', error);
@@ -129,7 +108,7 @@ class Router {
     }
   }
 
-  async renderPageWithTransition(page, cachedData = null) {
+  async renderPageWithTransition(page) {
     if (!this.content) return;
 
     if (navigator.onLine) {
@@ -143,7 +122,7 @@ class Router {
         
         try {
           this.content.style.opacity = '0';
-          this.content.innerHTML = await page.render(cachedData);
+          this.content.innerHTML = await page.render();
           
           requestAnimationFrame(() => {
             this.content.style.opacity = '1';
@@ -163,41 +142,13 @@ class Router {
     return transition.updateCallbackDone;
   }
 
-  async handleOfflineRoute(urlSegments, page) {
-    // Check if page can work offline
-    if (page.requiresOnline !== false) {
-      // Check for cached data
-      const cachedData = await this.checkCachedData(urlSegments);
-      if (cachedData) {
-        await this.renderWithOfflineIndicator(page, cachedData);
-      }
-      return;
-    }
-
-    // Page works offline, render normally
-    await this.renderPageWithTransition(page);
+  async handleOfflineRoute(page) {
+    await this.renderWithOfflineIndicator(page);
   }
 
-  async checkCachedData(urlSegments) {
-    try {
-      if (urlSegments.resource === 'stories' && urlSegments.id) {
-        return await IndexedDBManager.getFavorite(urlSegments.id);
-      }
-      
-      if (urlSegments.resource === 'favorites') {
-        return await IndexedDBManager.getAllFavorites();
-      }
-
-      return true;
-    } catch (error) {
-      console.error('Error checking cached data:', error);
-      return null;
-    }
-  }
-
-  async renderWithOfflineIndicator(page, cachedData) {
+  async renderWithOfflineIndicator(page) {
     this.showOfflineBanner();
-    await this.renderPageWithTransition(page, cachedData);
+    await this.renderPageWithTransition(page);
   }
 
   showOfflineBanner() {

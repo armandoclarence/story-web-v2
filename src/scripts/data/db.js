@@ -133,17 +133,10 @@ export async function retryQueuedPosts(db) {
 
   for (const post of posts) {
     try {
-      let response = {};
-      if(accessToken) {
-        if (post.type === 'new') {
-          response = await storeNewStory(post);
-        }
+      let response = {ok: false};
+      if (accessToken && navigator.onLine && post.type === 'new') {
+        response = await storeNewStory(post);
       }
-      
-      if(!accessToken) {
-        response.ok = false;
-      }
-
       if (post.type === 'new-guest') {
         response = await storeNewStoryGuest(post);
       } 
